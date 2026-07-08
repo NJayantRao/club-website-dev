@@ -39,19 +39,31 @@ const fetchEvents = async (): Promise<EventsResponse> => {
   };
 };
 
-export function useEvents() {
+export function useEvents(params: FetchEventsParams = {}) {
   const [events, setEvents] = useState(initialEvents);
+
+  const page = params.page ?? 1;
+  const limit = params.limit ?? events.length;
+  const eventType = params.eventType;
+
+  const filteredEvents = eventType
+    ? events.filter((event) => event.eventType === eventType)
+    : events;
+
+  const start = (page - 1) * limit;
+  const end = start + limit;
+  const paginatedEvents = filteredEvents.slice(start, end);
 
   return {
     data: {
-      data: events,
+      data: paginatedEvents,
       pagination: {
-        page: 1,
-        limit: events.length,
-        total: events.length,
-        totalPages: 1,
-        hasNextPage: false,
-        hasPrevPage: false,
+        page,
+        limit,
+        total: filteredEvents.length,
+        totalPages: Math.max(1, Math.ceil(filteredEvents.length / limit)),
+        hasNextPage: end < filteredEvents.length,
+        hasPrevPage: page > 1,
       },
     },
     loading: false,
