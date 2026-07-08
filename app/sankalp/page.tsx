@@ -1,10 +1,10 @@
 "use client";
-import Home from "@/components/Home";
+import Sankalp from "@/components/Sankalp";
 
 const page = () => {
   return (
     <>
-      <Home />
+      <Sankalp />
     </>
   );
 };
