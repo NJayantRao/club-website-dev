@@ -46,9 +46,19 @@ export function useEvents(params: FetchEventsParams = {}) {
   const limit = params.limit ?? events.length;
   const eventType = params.eventType;
 
-  const filteredEvents = eventType
-    ? events.filter((event) => event.eventType === eventType)
-    : events;
+  let filteredEvents = events;
+
+  if (params.status) {
+    filteredEvents = filteredEvents.filter(
+      (event) => event.status === params.status
+    );
+  }
+
+  if (params.eventType) {
+    filteredEvents = filteredEvents.filter(
+      (event) => event.eventType === params.eventType
+    );
+  }
 
   const start = (page - 1) * limit;
   const end = start + limit;
