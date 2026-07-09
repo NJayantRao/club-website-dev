@@ -116,7 +116,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  const isAdminPage = pathname.startsWith("/admin");
+  const isAdminPage =
+    pathname.startsWith("/sign-in") || pathname.startsWith("/dashboard");
 
   return (
     <>
