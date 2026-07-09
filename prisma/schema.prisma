@@ -103,6 +103,15 @@ model MediaUsage {
   media     Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 }
 
+model Admin {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt()
+}
+
 enum EventType {
   TECH
   NON_TECH
