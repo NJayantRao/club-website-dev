@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
 import "./globals.css";
+import AuthProvider from "@/context/AuthProvider";
 
 export const metadata = {
   title: "Club Excel",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Layout>{children}</Layout>
+        <AuthProvider>
+          <Layout>{children}</Layout>
+        </AuthProvider>
       </body>
     </html>
   );

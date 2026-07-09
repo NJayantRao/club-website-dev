@@ -6,6 +6,112 @@ datasource db {
   provider = "postgresql"
 }
 
+model Member {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  phone         String?
+  role          String        @default("MEMBER")
+  status        String        @default("ACTIVE")
+  year          String?
+  skills        String[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdEvents Event[]
+  links         MemberLink[]
+  achievements  Achievement[] @relation("AchievementMembers")
+}
+
+model MemberLink {
+  id        String   @id @default(uuid())
+  platform  String
+  url       String
+  memberId  String
+  createdAt DateTime @default(now())
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id                String           @id @default(uuid())
+  title             String
+  description       String?
+  type              EventType
+  startAt           DateTime
+  endAt             DateTime?
+  venue             String?
+  registrationStart DateTime?
+  registrationEnd   DateTime?
+  capacity          Int?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  createdBy         String
+  creator           Member           @relation(fields: [createdBy], references: [id])
+  formFields        EventFormField[]
+  responses         EventResponse[]
+}
+
+model EventFormField {
+  id          String    @id @default(uuid())
+  eventId     String
+  name        String
+  label       String
+  type        FieldType
+  required    Boolean   @default(false)
+  placeholder String?
+  order       Int?
+  createdAt   DateTime  @default(now())
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model EventResponse {
+  id         String   @id @default(uuid())
+  eventId    String
+  name       String
+  email      String
+  phone      String?
+  college    String?
+  attendance Boolean  @default(false)
+  answers    Json
+  createdAt  DateTime @default(now())
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, email])
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+  members     Member[] @relation("AchievementMembers")
+}
+
+model Media {
+  id        String       @id @default(uuid())
+  url       String
+  caption   String?
+  createdAt DateTime     @default(now())
+  usages    MediaUsage[]
+}
+
+model MediaUsage {
+  id        String         @id @default(uuid())
+  type      MediaUsageType
+  entityId  String
+  mediaId   String
+  createdAt DateTime       @default(now())
+  media     Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+}
+
+model Admin {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum EventType {
   TECH
   NON_TECH
@@ -32,101 +138,4 @@ enum MediaUsageType {
 enum Role {
   MEMBER
   ADMIN
-}
-
-model Member {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  phone         String?
-  role          String        @default("MEMBER")
-  status        String        @default("ACTIVE")
-  year          String?
-  skills        String[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  links         MemberLink[]
-  achievements  Achievement[] @relation("AchievementMembers")
-  createdEvents Event[]
-}
-
-model MemberLink {
-  id        String   @id @default(uuid())
-  platform  String
-  url       String
-  memberId  String
-  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-}
-
-model Event {
-  id                String           @id @default(uuid())
-  title             String
-  description       String?
-  type              EventType
-  startAt           DateTime
-  endAt             DateTime?
-  venue             String?
-  registrationStart DateTime?
-  registrationEnd   DateTime?
-  capacity          Int?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  createdBy         String
-  creator           Member           @relation(fields: [createdBy], references: [id])
-  formFields        EventFormField[]
-  responses         EventResponse[]
-}
-
-model EventFormField {
-  id          String    @id @default(uuid())
-  eventId     String
-  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  name        String
-  label       String
-  type        FieldType
-  required    Boolean   @default(false)
-  placeholder String?
-  order       Int?
-  createdAt   DateTime  @default(now())
-}
-
-model EventResponse {
-  id         String   @id @default(uuid())
-  eventId    String
-  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  name       String
-  email      String
-  phone      String?
-  college    String?
-  attendance Boolean  @default(false)
-  answers    Json
-  createdAt  DateTime @default(now())
-
-  @@unique([eventId, email])
-}
-
-model Achievement {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  createdAt   DateTime @default(now())
-  members     Member[] @relation("AchievementMembers")
-}
-
-model Media {
-  id        String       @id @default(uuid())
-  url       String
-  caption   String?
-  createdAt DateTime     @default(now())
-  usages    MediaUsage[]
-}
-
-model MediaUsage {
-  id        String         @id @default(uuid())
-  type      MediaUsageType
-  entityId  String
-  mediaId   String
-  media     Media          @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  createdAt DateTime       @default(now())
 }

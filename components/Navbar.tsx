@@ -78,7 +78,7 @@ const Navbar = () => {
         {/* Desktop Buttons */}
         <div className="hidden lg:flex items-center gap-3">
           <Link
-            href="/admin-login"
+            href="/sign-in"
             className="text-[11px] font-medium text-neutral-400 hover:text-white transition-colors uppercase tracking-wide px-3"
           >
             Admin
@@ -132,7 +132,7 @@ const Navbar = () => {
                 )}
                 <div className="flex flex-col gap-3 pt-2">
                   <Link
-                    href="/admin-login"
+                    href="/sign-in"
                     onClick={() => setIsOpen(false)}
                     className="text-sm font-medium text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
                   >
