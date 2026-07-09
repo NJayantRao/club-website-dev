@@ -28,7 +28,7 @@ const Navbar = () => {
     { name: "Achievements", path: "/achievements", isLink: true },
     { name: "Events", path: "/events", isLink: true },
     { name: "Our Team", path: "/our-team", isLink: true },
-    { name: "Contact Us", path: "/contactus", isLink: true },
+    { name: "Contact Us", path: "/contact-us", isLink: true },
   ];
 
   return (
