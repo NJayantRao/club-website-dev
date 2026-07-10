@@ -78,11 +78,14 @@ model EventResponse {
 }
 
 model Achievement {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   title       String
   description String?
-  createdAt   DateTime @default(now())
-  members     Member[] @relation("AchievementMembers")
+  imageUrl    String?
+  tag         AchievementType
+  achievedAt  DateTime
+  members     Member[]        @relation("AchievementMembers")
+  createdAt   DateTime        @default(now()) 
 }
 
 model Media {
@@ -155,4 +158,17 @@ enum ContactInquiryStatus {
   PENDING
   READ
   RESOLVED
+}
+
+enum AchievementType {
+  HACKATHON
+  COMPETITION
+  CERTIFICATION
+  WORKSHOP
+  INTERNSHIP
+  PLACEMENT
+  RESEARCH
+  PUBLICATION
+  OPEN_SOURCE
+  OTHER
 }

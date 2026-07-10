@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
-import { s } from "framer-motion/client";
 
 export async function POST(request: Request) {
   try {
