@@ -24,7 +24,7 @@ const Navbar = () => {
       path: isHomePage ? "#domains" : "/#domains",
       isLink: !isHomePage,
     },
-    { name: "Sankalp", path: "/sankalp", isLink: true },
+    // { name: "Sankalp", path: "/sankalp", isLink: true },
     { name: "Achievements", path: "/achievements", isLink: true },
     { name: "Events", path: "/events", isLink: true },
     { name: "Our Team", path: "/our-team", isLink: true },

@@ -17,7 +17,6 @@ model Member {
   skills        String[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  createdEvents Event[]
   links         MemberLink[]
   achievements  Achievement[] @relation("AchievementMembers")
 }
@@ -45,7 +44,7 @@ model Event {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   createdBy         String
-  creator           Member           @relation(fields: [createdBy], references: [id])
+  creator           Admin           @relation(fields: [createdBy], references: [id])
   formFields        EventFormField[]
   responses         EventResponse[]
 }
@@ -108,6 +107,7 @@ model Admin {
   name      String
   email     String   @unique
   password  String
+  createdEvents Event[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
