@@ -24,7 +24,6 @@ export const authOptions: NextAuthOptions = {
               password: true,
             },
           });
-          console.log(user);
 
           if (!user) {
             throw new Error("Invalid Credentials");
@@ -55,19 +54,14 @@ export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async session({ session, token }) {
-      console.log("SESSION callback token:", token);
       session.user.id = token.id;
       session.user.email = token.email;
       return session;
     },
     async jwt({ token, user }) {
-      console.log("JWT callback");
-      console.log("user:", user);
-      console.log("token before:", token);
       if (user) {
         token.id = user.id?.toString();
         token.email = user.email;
-        console.log("token after:", token);
       }
       return token;
     },

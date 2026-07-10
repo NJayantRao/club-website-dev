@@ -50,9 +50,6 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(session);
-    console.log(user);
-
     const event = await prisma.event.create({
       data: {
         title,
@@ -67,8 +64,6 @@ export async function POST(request: Request) {
         createdBy: user?.id,
       },
     });
-
-    console.log("Event registered successfully", event);
 
     return Response.json(
       {
@@ -110,8 +105,6 @@ export async function GET(request: NextRequest) {
         [sortBy]: sortOrder as "asc" | "desc",
       },
     });
-
-    console.log("Events fetched successfully", events);
 
     return Response.json(
       {
