@@ -11,6 +11,7 @@ model Member {
   name         String
   email        String        @unique
   phone        String?
+  imageUrl     String?
   role         String        @default("MEMBER")
   status       String        @default("ACTIVE")
   year         String?
@@ -85,7 +86,7 @@ model Achievement {
   tag         AchievementType
   achievedAt  DateTime
   members     Member[]        @relation("AchievementMembers")
-  createdAt   DateTime        @default(now()) 
+  createdAt   DateTime        @default(now())
 }
 
 model Media {
@@ -151,7 +152,8 @@ enum MediaUsageType {
 
 enum Role {
   MEMBER
-  ADMIN
+  ADVISOR
+  ALUMNI
 }
 
 enum ContactInquiryStatus {
