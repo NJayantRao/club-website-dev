@@ -1,6 +1,9 @@
 import { cloudinary } from "./cloudinary";
 
-const uploadImageToCloudinary = async (image: File): Promise<string> => {
+const uploadImageToCloudinary = async (
+  image: File,
+  folder: string
+): Promise<string> => {
   const bytes = await image.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
@@ -9,7 +12,7 @@ const uploadImageToCloudinary = async (image: File): Promise<string> => {
       cloudinary.uploader
         .upload_stream(
           {
-            folder: "club-achievements",
+            folder,
           },
           (error, result) => {
             if (error) return reject(error);
