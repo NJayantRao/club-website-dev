@@ -7,18 +7,18 @@ datasource db {
 }
 
 model Member {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  phone         String?
-  role          String        @default("MEMBER")
-  status        String        @default("ACTIVE")
-  year          String?
-  skills        String[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  links         MemberLink[]
-  achievements  Achievement[] @relation("AchievementMembers")
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  phone        String?
+  role         String        @default("MEMBER")
+  status       String        @default("ACTIVE")
+  year         String?
+  skills       String[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  links        MemberLink[]
+  achievements Achievement[] @relation("AchievementMembers")
 }
 
 model MemberLink {
@@ -44,7 +44,7 @@ model Event {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   createdBy         String
-  creator           Admin           @relation(fields: [createdBy], references: [id])
+  creator           Admin            @relation(fields: [createdBy], references: [id])
   formFields        EventFormField[]
   responses         EventResponse[]
 }
@@ -103,13 +103,24 @@ model MediaUsage {
 }
 
 model Admin {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password      String
   createdEvents Event[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ContactInquiry {
+  id        String               @id @default(uuid())
+  name      String
+  email     String
+  phoneNo   String
+  message   String
+  status    ContactInquiryStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 }
 
 enum EventType {
@@ -138,4 +149,10 @@ enum MediaUsageType {
 enum Role {
   MEMBER
   ADMIN
+}
+
+enum ContactInquiryStatus {
+  PENDING
+  READ
+  RESOLVED
 }
