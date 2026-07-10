@@ -94,7 +94,7 @@ export function useMembers(params: FetchMembersParams = {}) {
 
 export function useDeleteMember() {
   return {
-    deleteMember: async (_id: string) => ({ success: true }),
+    deleteMember: async (id: string) => ({ success: true }),
     loading: false,
     error: null,
   };

@@ -7,19 +7,19 @@ datasource db {
 }
 
 model Member {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  phone         String?
-  role          String        @default("MEMBER")
-  status        String        @default("ACTIVE")
-  year          String?
-  skills        String[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  createdEvents Event[]
-  links         MemberLink[]
-  achievements  Achievement[] @relation("AchievementMembers")
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  phone        String?
+  imageUrl     String?
+  role         String        @default("MEMBER")
+  status       String        @default("ACTIVE")
+  year         String?
+  skills       String[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  links        MemberLink[]
+  achievements Achievement[] @relation("AchievementMembers")
 }
 
 model MemberLink {
@@ -45,7 +45,7 @@ model Event {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   createdBy         String
-  creator           Member           @relation(fields: [createdBy], references: [id])
+  creator           Admin            @relation(fields: [createdBy], references: [id])
   formFields        EventFormField[]
   responses         EventResponse[]
 }
@@ -79,11 +79,14 @@ model EventResponse {
 }
 
 model Achievement {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   title       String
   description String?
-  createdAt   DateTime @default(now())
-  members     Member[] @relation("AchievementMembers")
+  imageUrl    String?
+  tag         AchievementType
+  achievedAt  DateTime
+  members     Member[]        @relation("AchievementMembers")
+  createdAt   DateTime        @default(now())
 }
 
 model Media {
@@ -104,12 +107,24 @@ model MediaUsage {
 }
 
 model Admin {
-  id        String   @id @default(uuid())
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password      String
+  createdEvents Event[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ContactInquiry {
+  id        String               @id @default(uuid())
   name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email     String
+  phoneNo   String
+  message   String
+  status    ContactInquiryStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 }
 
 enum EventType {
@@ -137,5 +152,25 @@ enum MediaUsageType {
 
 enum Role {
   MEMBER
-  ADMIN
+  ADVISOR
+  ALUMNI
+}
+
+enum ContactInquiryStatus {
+  PENDING
+  READ
+  RESOLVED
+}
+
+enum AchievementType {
+  HACKATHON
+  COMPETITION
+  CERTIFICATION
+  WORKSHOP
+  INTERNSHIP
+  PLACEMENT
+  RESEARCH
+  PUBLICATION
+  OPEN_SOURCE
+  OTHER
 }
