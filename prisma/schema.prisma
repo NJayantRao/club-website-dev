@@ -11,13 +11,13 @@ model Member {
   name         String
   email        String        @unique
   phone        String?
-  imageUrl     String?
   role         String        @default("MEMBER")
   status       String        @default("ACTIVE")
   year         String?
   skills       String[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  imageUrl     String?
   links        MemberLink[]
   achievements Achievement[] @relation("AchievementMembers")
 }
@@ -82,11 +82,11 @@ model Achievement {
   id          String          @id @default(uuid())
   title       String
   description String?
+  createdAt   DateTime        @default(now())
+  achievedAt  DateTime
   imageUrl    String?
   tag         AchievementType
-  achievedAt  DateTime
   members     Member[]        @relation("AchievementMembers")
-  createdAt   DateTime        @default(now())
 }
 
 model Media {
@@ -111,9 +111,9 @@ model Admin {
   name          String
   email         String   @unique
   password      String
-  createdEvents Event[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  createdEvents Event[]
 }
 
 model ContactInquiry {
