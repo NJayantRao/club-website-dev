@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { name, email, phoneNo, message } = await request.json();
 

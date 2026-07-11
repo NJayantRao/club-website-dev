@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
+import { NextRequest } from "next/server";
 
-export async function GET(_request: Request) {
+export async function GET(_request: NextRequest) {
   try {
     const members = await prisma.member.findMany();
 
