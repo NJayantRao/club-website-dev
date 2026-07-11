@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { uploadLocalImageToCloudinary } from "@/lib/helper";
+import { uploadLocalImageToCloudinary } from "@/lib/upload-local-cloudinary";
 
 dotenv.config();
 

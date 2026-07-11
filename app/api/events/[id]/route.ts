@@ -1,26 +1,17 @@
-import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
-import { authOptions } from "../../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
+import { requireAdminAuth } from "@/lib/authorize-admin";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
+    const auth = await requireAdminAuth();
 
-    if (!session || !user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        { status: 401 }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
-
     const { id } = await params;
 
     if (!id) {
@@ -74,17 +65,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
+    const auth = await requireAdminAuth();
 
-    if (!session || !user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        { status: 401 }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
 
     const { id } = await params;
@@ -121,6 +105,77 @@ export async function DELETE(
       {
         success: false,
         message: "Failed to delete event",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAdminAuth();
+
+    if (!auth.success) {
+      return auth.response;
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Event id is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const event = await prisma.event.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        formFields: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      return Response.json(
+        {
+          success: false,
+          message: "Event not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return Response.json(
+      {
+        success: true,
+        message: "Event fetched successfully",
+        event,
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("Failed to fetch event:", error);
+
+    return Response.json(
+      {
+        success: false,
+        message: "Failed to fetch event",
       },
       {
         status: 500,

@@ -1,9 +1,8 @@
 import prisma from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
 import { NextRequest } from "next/server";
+import { requireAdminAuth } from "@/lib/authorize-admin";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { name, email, phoneNo, message } = await request.json();
 
@@ -55,19 +54,10 @@ export async function POST(request: Request) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
+    const auth = await requireAdminAuth();
 
-    if (!session || !user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        {
-          status: 401,
-        }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
 
     const searchParams = request.nextUrl.searchParams;
