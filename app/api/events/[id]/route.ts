@@ -128,3 +128,81 @@ export async function DELETE(
     );
   }
 }
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user;
+
+    if (!session || !user) {
+      return Response.json(
+        {
+          success: false,
+          message: "Unauthorized request",
+        },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Event id is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const event = await prisma.event.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        formFields: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+      },
+    });
+
+    if (!event) {
+      return Response.json(
+        {
+          success: false,
+          message: "Event not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return Response.json(
+      {
+        success: true,
+        message: "Event fetched successfully",
+        event,
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("Failed to fetch event:", error);
+
+    return Response.json(
+      {
+        success: false,
+        message: "Failed to fetch event",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
