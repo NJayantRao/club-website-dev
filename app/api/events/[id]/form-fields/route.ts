@@ -1,24 +1,16 @@
-import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { requireAdminAuth } from "@/lib/authorize-admin";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
+    const auth = await requireAdminAuth();
 
-    if (!session || !user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        { status: 401 }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
 
     const { id } = await params;

@@ -1,25 +1,15 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { AchievementType } from "@prisma/client";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
+import { requireAdminAuth } from "@/lib/authorize-admin";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
+    const auth = await requireAdminAuth();
 
-    if (!session || !user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        {
-          status: 401,
-        }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
 
     const formData = await request.formData();

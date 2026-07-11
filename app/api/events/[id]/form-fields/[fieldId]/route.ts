@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
-import { authOptions } from "@/app/api/auth/[...nextauth]/options";
+import { requireAdminAuth } from "@/lib/authorize-admin";
 
 export async function PATCH(
   request: NextRequest,
@@ -15,16 +14,10 @@ export async function PATCH(
   }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireAdminAuth();
 
-    if (!session?.user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        { status: 401 }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
 
     const { id, fieldId } = await params;
@@ -90,16 +83,10 @@ export async function DELETE(
   }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireAdminAuth();
 
-    if (!session?.user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        { status: 401 }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
 
     const { id, fieldId } = await params;

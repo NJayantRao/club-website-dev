@@ -1,24 +1,16 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/options";
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
+import { requireAdminAuth } from "@/lib/authorize-admin";
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const user = session?.user;
+    const auth = await requireAdminAuth();
 
-    if (!session || !user) {
-      return Response.json(
-        {
-          success: false,
-          message: "Unauthorized request",
-        },
-        {
-          status: 401,
-        }
-      );
+    if (!auth.success) {
+      return auth.response;
     }
+
+    const user = auth.user;
 
     const {
       title,
@@ -46,6 +38,11 @@ export async function POST(request: Request) {
       return Response.json(
         { success: false, message: "Start date is required" },
         { status: 400 }
+      );
+    } else if (!user) {
+      return Response.json(
+        { success: false, message: "User not authorized" },
+        { status: 403 }
       );
     }
 
