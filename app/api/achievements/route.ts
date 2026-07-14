@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { AchievementType } from "@prisma/client";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -85,6 +86,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidateTag("achievements", "max");
+
     return Response.json(
       {
         success: true,
@@ -124,13 +127,30 @@ export async function GET(request: NextRequest) {
       skip,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        achievedAt: true,
+        imageUrl: true,
+        tag: true,
+      },
     });
 
     return Response.json(
       {
         success: true,
-        message: " Achievement fetched successfully",
-        achievements,
+        message: "Achievement fetched successfully",
+        achievements: achievements.map((achievement) => ({
+          id: achievement.id,
+          name: achievement.title,
+          description: achievement.description ?? "",
+          achievedAt: achievement.achievedAt.toISOString(),
+          achievementTag: achievement.tag.toLowerCase(),
+          images: achievement.imageUrl
+            ? [{ imageUrl: achievement.imageUrl }]
+            : [],
+        })),
       },
       {
         status: 200,

@@ -5,13 +5,18 @@ import { Trophy } from "lucide-react";
 
 import AchievementsSection from "@/components/ui/AchievementsSection";
 import GallerySection from "@/components/ui/GallerySection";
+import type { AchievementItem } from "@/lib/achievements";
 
 const tabs = [
   { id: "achievements", label: "Achievements" },
   { id: "gallery", label: "Gallery" },
 ] as const;
 
-export default function Achievements() {
+interface AchievementsProps {
+  achievements?: AchievementItem[];
+}
+
+export default function Achievements({ achievements = [] }: AchievementsProps) {
   const [activeTab, setActiveTab] = useState<"achievements" | "gallery">(
     "achievements"
   );
@@ -20,7 +25,7 @@ export default function Achievements() {
     <div className="min-h-screen bg-[#050505] px-4 pb-16 pt-24 text-white">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
-          <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-neutral-400">
+          <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/3 px-4 py-2 text-sm text-neutral-400">
             <Trophy className="h-4 w-4 text-yellow-400" />
             Club milestones
           </div>
@@ -36,7 +41,7 @@ export default function Achievements() {
         </div>
 
         <div className="mb-12 flex justify-center">
-          <div className="flex gap-3 rounded-full border border-white/10 bg-white/[0.03] p-2">
+          <div className="flex gap-3 rounded-full border border-white/10 bg-white/3 p-2">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
 
@@ -62,7 +67,7 @@ export default function Achievements() {
         </div>
 
         {activeTab === "achievements" ? (
-          <AchievementsSection />
+          <AchievementsSection initialAchievements={achievements} />
         ) : (
           <GallerySection />
         )}

@@ -75,6 +75,7 @@ export default function GallerySection() {
                         src={img.imageUrl}
                         alt={`${item.groupName}-${i + 1}`}
                         fill
+
                         className="object-cover group-hover:scale-105 transition-transform duration-700"
                       />
 

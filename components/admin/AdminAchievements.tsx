@@ -34,7 +34,7 @@ const AdminAchievements: React.FC = () => {
   const initialForm = {
     name: "",
     description: "",
-    achievementType: "general",
+    achievementTag: "general",
     achievedAt: "",
   };
   const [form, setForm] = useState(initialForm);
@@ -70,7 +70,7 @@ const AdminAchievements: React.FC = () => {
       const fd = new FormData();
       fd.append("name", form.name);
       fd.append("description", form.description);
-      fd.append("achievementType", form.achievementType);
+      fd.append("achievementTag", form.achievementTag);
       if (form.achievedAt) fd.append("achievedAt", form.achievedAt);
       photoFiles.forEach((f) => fd.append("photos", f));
 
@@ -182,7 +182,7 @@ const AdminAchievements: React.FC = () => {
                     {a.name}
                   </p>
                   <span className="inline-block px-2 py-0.5 rounded-full bg-white/5 text-neutral-400 text-[10px] uppercase mt-1">
-                    {a.achievementType}
+                    {a.achievementTag}
                   </span>
                 </div>
                 <button
@@ -260,11 +260,11 @@ const AdminAchievements: React.FC = () => {
                     Type
                   </label>
                   <select
-                    value={form.achievementType}
+                    value={form.achievementTag}
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        achievementType: e.target.value,
+                        achievementTag: e.target.value,
                       }))
                     }
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm"

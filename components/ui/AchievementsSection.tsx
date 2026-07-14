@@ -8,10 +8,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAchievements } from "@/hooks/useAchievements";
 import { Pagination } from "@/components/ui/Pagination";
 import ImageLightbox from "./ImageBox";
+import type { AchievementItem } from "@/lib/achievements";
 
 const LIMIT = 9;
 
-export default function AchievementsSection() {
+interface AchievementsSectionProps {
+  initialAchievements?: AchievementItem[];
+}
+
+export default function AchievementsSection({
+  initialAchievements = [],
+}: AchievementsSectionProps) {
   const [page, setPage] = useState(1);
 
   const [lightbox, setLightbox] = useState<{
@@ -22,6 +29,7 @@ export default function AchievementsSection() {
   const { data, loading } = useAchievements({
     page,
     limit: LIMIT,
+    initialAchievements,
   });
 
   const achievements = data?.data ?? [];
@@ -54,7 +62,7 @@ export default function AchievementsSection() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-white/5 rounded-[2rem] h-64 animate-pulse"
+              className="bg-white/5 rounded-4xl h-64 animate-pulse"
             />
           ))}
         </div>
@@ -70,7 +78,7 @@ export default function AchievementsSection() {
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group bg-white/[0.03] border border-white/10 rounded-[2rem] overflow-hidden hover:border-white/20 transition-all duration-300"
+                className="group bg-white/3 border border-white/10 rounded-4xl overflow-hidden hover:border-white/20 transition-all duration-300"
               >
                 {item.images?.length > 0 && (
                   <div
@@ -84,8 +92,9 @@ export default function AchievementsSection() {
                   >
                     <Image
                       src={item.images[0].imageUrl}
-                      alt={item.name}
+                      alt={item.title}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-700"
                     />
 
@@ -101,11 +110,11 @@ export default function AchievementsSection() {
                   <div className="flex items-center gap-2 mb-3">
                     <span
                       className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
-                        typeColors[item.achievementType] ??
+                        typeColors[item.achievementTag] ??
                         "bg-white/10 text-neutral-300"
                       }`}
                     >
-                      {item.achievementType}
+                      {item.achievementTag}
                     </span>
 
                     {item.achievedAt && (
@@ -116,7 +125,7 @@ export default function AchievementsSection() {
                   </div>
 
                   <h3 className="text-lg font-bold text-white mb-2 line-clamp-1">
-                    {item.name}
+                    {item.title ?? item.name}
                   </h3>
 
                   <p className="text-sm text-neutral-500 line-clamp-3">
