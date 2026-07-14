@@ -1,11 +1,19 @@
-"use client";
 import OurTeam from "@/components/OurTeam";
-import React from "react";
+import { getAdvisors } from "@/lib/advisors";
+import { getAlumni } from "@/lib/alumni";
+import { getMembers } from "@/lib/members";
 
-const page = () => {
+export const revalidate = 86400;
+
+const page = async () => {
+  const [advisors, members, alumni] = await Promise.all([
+    getAdvisors(),
+    getMembers(),
+    getAlumni(),
+  ]);
   return (
     <>
-      <OurTeam />
+      <OurTeam advisors={advisors} members={members} alumni={alumni} />
     </>
   );
 };

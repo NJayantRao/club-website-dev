@@ -34,7 +34,7 @@ export const getAchievements = unstable_cache(
       achievementTag: achievement.tag.toLowerCase(),
       images: achievement.imageUrl ? [{ imageUrl: achievement.imageUrl }] : [],
     }));
-  }, // 👈 closes the arrow function body — this was the missing piece
-  ["achievements-list"], // unstable_cache's 2nd arg: cache key
-  { tags: ["achievements"] } // unstable_cache's 3rd arg: options
+  },
+  ["achievements-list"],
+  { tags: ["achievements"] }
 );

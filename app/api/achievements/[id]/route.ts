@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -55,6 +56,8 @@ export async function PATCH(
         ...data,
       },
     });
+
+    revalidateTag("achievements", "max");
 
     return Response.json(
       {

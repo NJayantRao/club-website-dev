@@ -1,21 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { advisors, alumni, members } from "@/data/initial-members";
 import SectionHeading from "@/components/ui/SectionHeading";
 import TeamToggle from "@/components/ui/TeamToggle";
 import TeamMemberCard from "@/components/ui/TeamMemberCard";
+import { AdvisorItem } from "@/lib/advisors";
+import { MemberItem } from "@/lib/members";
+import { AlumniItem } from "@/lib/alumni";
 
-export type TeamMember = {
-  name: string;
-  role: string;
-  img: string;
-  linkedin?: string;
-};
+interface OurTeamProps {
+  advisors: AdvisorItem[];
+  members: MemberItem[];
+  alumni: AlumniItem[];
+}
 
 type SectionType = "members" | "alumni";
 
-const OurTeam = () => {
+const OurTeam = ({ advisors, members, alumni }: OurTeamProps) => {
   const [activeSection, setActiveSection] = useState<SectionType>("members");
 
   return (
@@ -42,11 +43,12 @@ const OurTeam = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
           {advisors.map((advisor, idx) => (
             <TeamMemberCard
-              key={advisor.name}
+              key={advisor.id}
               name={advisor.name}
               role={advisor.role}
+              designation={advisor.designation ?? undefined}
               label="Club Advisor"
-              img={advisor.img}
+              img={advisor.imageUrl}
               accent="blue"
               size="advisor"
               delay={idx * 100}
@@ -61,16 +63,17 @@ const OurTeam = () => {
         <section className="mb-40 transition-all duration-500">
           <SectionHeading title="Core Members" accent="purple" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {members.map((member: TeamMember, idx) => (
+            {members.map((member, idx) => (
               <TeamMemberCard
-                key={`${member.name}-${member.img}-${idx}`}
+                key={member.id}
                 name={member.name}
                 role={member.role}
-                label={member.role}
-                img={member.img}
+                designation={member.designation ?? undefined}
+                label={member.designation ?? "Core Member"}
+                img={member.imageUrl}
                 accent="purple"
                 size="member"
-                linkedin={member.linkedin}
+                linkedin={member.link || undefined}
                 delay={(idx % 4) * 50}
               />
             ))}
@@ -80,16 +83,16 @@ const OurTeam = () => {
         <section className="transition-all duration-500">
           <SectionHeading title="Distinguished Alumni" accent="purple" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {alumni.map((member: TeamMember, idx) => (
+            {alumni.map((member, idx) => (
               <TeamMemberCard
-                key={`${member.name}-${member.img}-${idx}`}
+                key={member.id}
                 name={member.name}
                 role={member.role}
-                label={member.role}
-                img={member.img}
+                designation={member.designation ?? undefined}
+                label={member.designation ?? "Alumnus"}
+                img={member.imageUrl}
                 accent="purple"
                 size="member"
-                linkedin={member.linkedin}
                 delay={(idx % 4) * 50}
               />
             ))}

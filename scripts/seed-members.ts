@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { uploadLocalImageToCloudinary } from "@/lib/upload-local-cloudinary";
 
@@ -15,7 +15,7 @@ const prisma = new PrismaClient({
 
 const members = [
   {
-    name: "<enter-your-name",
+    name: "enter-your-name",
     email: "your-email@gmail.com",
     phone: "9112345715",
     imageUrl: "/members/avatar.jpg",

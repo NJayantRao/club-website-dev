@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { Role } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -32,9 +34,8 @@ export async function PATCH(
     const name = (formData.get("name") as string) ?? undefined;
     const email = (formData.get("email") as string) ?? undefined;
     const phone = (formData.get("phone") as string) ?? undefined;
-    const role = (formData.get("role") as string) ?? undefined;
+    const role = (formData.get("role") as Role) ?? undefined;
     const year = (formData.get("year") as string) ?? undefined;
-    const status = (formData.get("status") as string) ?? undefined;
 
     const skillsValue = formData.get("skills");
     const skills = skillsValue
@@ -59,11 +60,12 @@ export async function PATCH(
         phone,
         role,
         year,
-        status,
         skills,
         imageUrl,
       },
     });
+
+    revalidateTag("members", "max");
 
     return Response.json(
       {

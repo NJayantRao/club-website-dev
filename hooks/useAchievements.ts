@@ -1,97 +1,47 @@
-import { initialAchievements } from "@/data/initial-achievements";
-import { useEffect, useState } from "react";
-import axios from "axios";
+"use client";
+
+import { useMemo } from "react";
 import type { AchievementItem } from "@/lib/achievements";
 
-interface FetchParams {
+interface FetchAchievementsParams {
   page?: number;
   limit?: number;
   initialAchievements?: AchievementItem[];
 }
 
-interface AchievementsResponse {
-  success: boolean;
-  message: string;
-  achievements: AchievementItem[];
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
 }
 
-export function useAchievements(params: FetchParams = {}) {
-  const [achievements, setAchievements] = useState<AchievementItem[]>(
-    params.initialAchievements ?? []
-  );
-  const [loading, setLoading] = useState(!params.initialAchievements?.length);
-  const [error, setError] = useState<string | null>(null);
+export function useAchievements({
+  page = 1,
+  limit = 9,
+  initialAchievements = [],
+}: FetchAchievementsParams = {}) {
+  const data = useMemo(() => {
+    const start = (page - 1) * limit;
+    const end = start + limit;
 
-  const page = params.page ?? 1;
-  const limit = params.limit ?? 10;
-
-  useEffect(() => {
-    if (params.initialAchievements?.length) {
-      setAchievements(params.initialAchievements);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    const fetchAchievements = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data } = await axios.get<AchievementsResponse>(
-          `/api/achievements?page=${page}&limit=${limit}`
-        );
-
-        setAchievements(data.achievements ?? []);
-      } catch (err) {
-        if (axios.isAxiosError(err)) {
-          setError(err.response?.data?.message || err.message);
-        } else {
-          setError("Failed to fetch achievements");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAchievements();
-  }, [limit, page, params.initialAchievements]);
-
-  const start = (page - 1) * limit;
-  const end = start + limit;
-
-  const paginated = achievements.slice(start, end);
-
-  return {
-    data: {
-      data: paginated,
+    return {
+      data: initialAchievements.slice(start, end),
       pagination: {
         page,
         limit,
-        total: achievements.length,
-        totalPages: Math.ceil(achievements.length / limit),
-        hasNextPage: end < achievements.length,
+        total: initialAchievements.length,
+        totalPages: Math.max(1, Math.ceil(initialAchievements.length / limit)),
+        hasNextPage: end < initialAchievements.length,
         hasPrevPage: page > 1,
-      },
-    },
-    loading,
-    error,
-    setAchievements,
-  };
-}
-
-export function useDeleteAchievement(
-  setAchievements: React.Dispatch<
-    React.SetStateAction<typeof initialAchievements>
-  >
-) {
-  const deleteAchievement = async (id: string) => {
-    setAchievements((prev) => prev.filter((item) => item.id !== id));
-    return { success: true };
-  };
+      } satisfies PaginationMeta,
+    };
+  }, [page, limit, initialAchievements]);
 
   return {
-    deleteAchievement,
+    data,
     loading: false,
     error: null,
   };

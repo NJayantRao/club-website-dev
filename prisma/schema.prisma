@@ -11,8 +11,8 @@ model Member {
   name         String
   email        String        @unique
   phone        String?
-  role         String        @default("MEMBER")
-  status       String        @default("ACTIVE")
+  role         Role        @default(MEMBER)
+  designation  String?     
   year         String?
   skills       String[]
   createdAt    DateTime      @default(now())

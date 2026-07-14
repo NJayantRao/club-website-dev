@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { Role } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
     const phone = (formData.get("phone") as string | null) ?? null;
-    const role = (formData.get("role") as string) || undefined;
+    const role = (formData.get("role") as Role) || undefined;
     const image = formData.get("image") as File | null;
     const skills = JSON.parse(
       (formData.get("skills") as string) || "[]"
@@ -60,6 +62,8 @@ export async function POST(request: NextRequest) {
         skills,
       },
     });
+
+    revalidateTag("members", "max");
 
     return Response.json(
       {

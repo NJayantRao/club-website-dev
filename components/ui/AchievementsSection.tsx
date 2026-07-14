@@ -5,9 +5,9 @@ import Image from "next/image";
 import { Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { useAchievements } from "@/hooks/useAchievements";
 import { Pagination } from "@/components/ui/Pagination";
 import ImageLightbox from "./ImageBox";
+import { useAchievements } from "@/hooks/useAchievements";
 import type { AchievementItem } from "@/lib/achievements";
 
 const LIMIT = 9;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ArrowUpRight } from "lucide-react";
 
 export type TeamMemberCardSize = "advisor" | "member";
@@ -6,7 +6,8 @@ export type TeamMemberCardSize = "advisor" | "member";
 export interface TeamMemberCardProps {
   name: string;
   role: string;
-  img: string;
+  designation?: string | null;
+  img: string | null;
   label: string;
   accent: "blue" | "purple";
   size: TeamMemberCardSize;
@@ -27,9 +28,13 @@ const imageSizeClass = {
 const fallbackAvatar = (name: string) =>
   `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111&color=fff`;
 
+const resolveSrc = (img: string | null, name: string) =>
+  img ? `${img}` : fallbackAvatar(name);
+
 export default function TeamMemberCard({
   name,
   role,
+  designation,
   label,
   img,
   linkedin,
@@ -37,8 +42,13 @@ export default function TeamMemberCard({
   size,
   delay = 0,
 }: TeamMemberCardProps) {
-  const [src, setSrc] = useState<string>(`/members/${img}`);
+  const [src, setSrc] = useState<string>(() => resolveSrc(img, name));
   const clickable = Boolean(linkedin);
+
+  // keep src in sync if img/name ever change after mount
+  useEffect(() => {
+    setSrc(resolveSrc(img, name));
+  }, [img, name]);
 
   const handleError = () => {
     setSrc(fallbackAvatar(name));
@@ -79,7 +89,12 @@ export default function TeamMemberCard({
         <p className="text-[11px] text-purple-400/80 font-mono uppercase tracking-[0.25em]">
           {label}
         </p>
-        <p className="text-neutral-500 font-mono text-[10px] tracking-widest uppercase mt-2">
+        {designation && (
+          <p className="text-neutral-300 font-mono text-[11px] tracking-widest uppercase mt-2">
+            {designation}
+          </p>
+        )}
+        <p className="text-neutral-500 font-mono text-[10px] tracking-widest uppercase mt-1">
           {role}
         </p>
       </div>
