@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -103,7 +103,7 @@ const SidebarContent = ({
     <div className="mt-6 pt-4 border-t border-white/10">
       <div className="px-4 py-2 mb-2">
         <p className="text-xs text-neutral-500 truncate">
-          {session?.user?.name}
+          {session?.user?.email}
         </p>
         <p className="text-[10px] text-neutral-600 truncate">
           {session?.user?.email}
@@ -148,6 +148,7 @@ const AdminDashboard = () => {
       router.push("/sign-in");
     },
   });
+
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -158,7 +159,7 @@ const AdminDashboard = () => {
     recruits: 0,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     if (status === "authenticated") {
       fetchStats()
@@ -246,7 +247,7 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
               {activeTab === "dashboard"
-                ? `Welcome back, ${session?.user?.name}`
+                ? `Welcome back, ${session?.user?.email}`
                 : navItems.find((i) => i.id === activeTab)?.label}
             </h1>
             <p className="text-neutral-500 text-sm lg:text-base">
