@@ -1,26 +1,56 @@
 "use client";
-import React, { useState } from "react";
-import { Plus, Edit2, Trash2, X, Upload } from "lucide-react";
+
+import React, { useMemo, useState } from "react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Role } from "@prisma/client";
+import axios from "axios";
+
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
 import MemberModal from "../ui/MemberModal";
-import axios from "axios";
-import { Role } from "@prisma/client";
 
-// Local simple list loader replaced useAdminList hook
-const useAdminList = (url: string) => {
-  const [data, setData] = React.useState<any[]>([]);
-  const [pagination, setPagination] = React.useState<any | null>(null);
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: Role;
+  designation: string | null;
+  year: string | null;
+  skills: string[];
+  imageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminMembersProps {
+  role?: "MEMBER" | "ADVISOR" | "ALUMNI";
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+const useAdminList = <T,>(url: string) => {
+  const [data, setData] = React.useState<T[]>([]);
+  const [pagination, setPagination] = React.useState<PaginationInfo | null>(
+    null
+  );
   const [isLoading, setIsLoading] = React.useState(true);
 
   const fetchData = async () => {
     setIsLoading(true);
+
     try {
-      const res = await fetch(url);
-      const json = await res.json();
-      setData(json.data || []);
-      setPagination(json.pagination || null);
-    } catch (e) {
+      const { data: response } = await axios.get(url);
+
+      setData(response.data ?? []);
+      setPagination(response.pagination ?? null);
+    } catch (err) {
+      console.error(err);
       setData([]);
       setPagination(null);
     } finally {
@@ -32,40 +62,56 @@ const useAdminList = (url: string) => {
     fetchData();
   }, [url]);
 
-  return { data, pagination, isLoading, refetch: fetchData } as const;
+  return {
+    data,
+    pagination,
+    isLoading,
+    refetch: fetchData,
+  } as const;
 };
 
 type FieldErrors = Record<string, string>;
-type MemberFormData = any;
+
+type MemberFormData = {
+  name: string;
+  email: string;
+  phone: string;
+  role: Role;
+  year: string;
+  skills: string;
+};
+
 type PopupType = "success" | "error" | "confirm";
 
-type PopupState = {
+interface PopupState {
   show: boolean;
   type: PopupType;
   message: string;
   isConfirm: boolean;
   onConfirm: () => void;
-};
+}
 
-const validateMember = (f: MemberFormData) => {
-  const errs: FieldErrors = {};
-  if (!f.name) errs.name = "Name is required";
-  if (!f.role) errs.role = "Role is required";
-  return errs;
+const validateMember = (form: MemberFormData) => {
+  const errors: FieldErrors = {};
+
+  if (!form.name.trim()) {
+    errors.name = "Name is required";
+  }
+
+  if (!form.email.trim()) {
+    errors.email = "Email is required";
+  }
+
+  if (!form.skills.trim()) {
+    errors.skills = "At least one skill is required";
+  }
+
+  return errors;
 };
 
 const LIMIT = 12;
-const CATEGORIES = ["member", "alumni", "advisor"] as const;
-const PLATFORMS = [
-  "linkedin",
-  "github",
-  "twitter",
-  "instagram",
-  "website",
-  "other",
-] as const;
 
-const EMPTY_FORM = {
+const EMPTY_FORM: MemberFormData = {
   name: "",
   email: "",
   phone: "",
@@ -74,22 +120,131 @@ const EMPTY_FORM = {
   skills: "",
 };
 
-const AdminMembers = () => {
+interface MemberCardProps {
+  member: Member;
+  onEdit: (member: Member) => void;
+}
+
+const MemberCard = ({ member, onEdit }: MemberCardProps) => (
+  <div className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-white/20">
+    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#111]">
+      <div className="relative aspect-[4/5] overflow-hidden">
+        <img
+          src={member.imageUrl ?? "/placeholder.jpg"}
+          alt={member.name}
+          className="absolute inset-0 h-full w-full object-cover object-center transition duration-500 group-hover:scale-105"
+        />
+
+        {/* Hover Overlay */}
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-300">
+          <button
+            onClick={() => onEdit(member)}
+            className="absolute top-3 right-3 rounded-xl bg-white/15 p-2 text-white backdrop-blur-md hover:bg-white hover:text-black transition"
+          >
+            <Edit2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/70 to-transparent" />
+      </div>
+
+      <div className="p-4">
+        <h3 className="truncate text-lg font-semibold text-white">
+          {member.name}
+        </h3>
+
+        <p className="mt-1 text-sm uppercase tracking-wide text-neutral-400">
+          {member.role}
+        </p>
+
+        {member.year && (
+          <span className="mt-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs text-neutral-300">
+            {member.year}
+          </span>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+interface MemberSectionProps {
+  title: string;
+  members: Member[];
+  onEdit: (member: Member) => void;
+}
+
+const MemberSection = ({ title, members, onEdit }: MemberSectionProps) => {
+  if (members.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-base font-semibold text-white">
+        {title}{" "}
+        <span className="ml-2 text-sm font-normal text-neutral-500">
+          ({members.length})
+        </span>
+      </h3>
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        {members.map((member) => (
+          <MemberCard key={member.id} member={member} onEdit={onEdit} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
   const [page, setPage] = useState(1);
+
   const {
     data: members,
     pagination,
     isLoading,
     refetch,
-  } = useAdminList(`/api/members?page=${page}&limit=${LIMIT}`);
+  } = useAdminList<Member>(
+    `/api/our-team?page=${page}&limit=${LIMIT}&sortBy=year&role=${role}`
+  );
+
+  const { current, alumni, advisors } = useMemo(() => {
+    const groups: { current: Member[]; alumni: Member[]; advisors: Member[] } =
+      {
+        current: [],
+        alumni: [],
+        advisors: [],
+      };
+
+    for (const member of members) {
+      switch (member.role) {
+        case Role.ALUMNI:
+          groups.alumni.push(member);
+          break;
+        case Role.ADVISOR:
+          groups.advisors.push(member);
+          break;
+        default:
+          groups.current.push(member);
+      }
+    }
+
+    return groups;
+  }, [members]);
 
   const [showModal, setShowModal] = useState(false);
   const [memberId, setMemberId] = useState<string | null>(null);
+
   const [form, setForm] = useState<MemberFormData>(EMPTY_FORM);
+
   const [errors, setErrors] = useState<FieldErrors>({});
+
   const [imageFile, setImageFile] = useState<File | null>(null);
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [isSaving, setIsSaving] = useState(false);
+
   const [popup, setPopup] = useState<PopupState>({
     show: false,
     type: "success",
@@ -98,8 +253,12 @@ const AdminMembers = () => {
     onConfirm: () => {},
   });
 
-  const updateField = (key: keyof MemberFormData, value: string) =>
-    setForm((f: MemberFormData) => ({ ...f, [key]: value }));
+  const updateField = (key: keyof MemberFormData, value: string | Role) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
   const openAdd = () => {
     setForm(EMPTY_FORM);
@@ -110,31 +269,36 @@ const AdminMembers = () => {
     setShowModal(true);
   };
 
-  const openEdit = (member: any) => {
+  const openEdit = (member: Member) => {
     setMemberId(member.id);
     setErrors({});
+
     setForm({
       name: member.name ?? "",
-      role: member.role ?? "",
-      category: member.category ?? "member",
-      section: member.section ?? "",
-      bio: member.bio ?? "",
-      platform: member.platform ?? "linkedin",
-      color: member.color,
-      year: member.year,
+      email: member.email ?? "",
+      phone: member.phone ?? "",
+      role: member.role ?? Role.MEMBER,
+      year: member.year ?? "",
+      skills: (member.skills ?? []).join(", "),
     });
-    setImagePreview(member.img);
+
+    setImagePreview(member.imageUrl ?? null);
     setImageFile(null);
     setShowModal(true);
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const validationErrors = validateMember(form);
     setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
 
     setIsSaving(true);
+
     try {
       const fd = new FormData();
 
@@ -149,7 +313,7 @@ const AdminMembers = () => {
         JSON.stringify(
           form.skills
             .split(",")
-            .map((s: string) => s.trim())
+            .map((skill) => skill.trim())
             .filter(Boolean)
         )
       );
@@ -159,7 +323,9 @@ const AdminMembers = () => {
       }
 
       const url = memberId ? `/api/members/${memberId}` : "/api/members";
+
       const method = memberId ? "PATCH" : "POST";
+
       const { data } = await axios({
         url,
         method,
@@ -169,19 +335,22 @@ const AdminMembers = () => {
         },
       });
 
-      setShowModal(false);
-      setForm(EMPTY_FORM);
-      setImageFile(null);
-      setImagePreview(null);
-      setMemberId(null);
       refetch();
+
       setPopup({
         show: true,
         type: "success",
-        message: memberId ? "Member updated!" : "Member added!",
+        message: data.message,
         isConfirm: false,
         onConfirm: () => {},
       });
+
+      setShowModal(false);
+      setMemberId(null);
+      setForm(EMPTY_FORM);
+      setImageFile(null);
+      setImagePreview(null);
+      setErrors({});
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setPopup({
@@ -207,91 +376,66 @@ const AdminMembers = () => {
 
   const deleteMember = async (id: string) => {
     try {
-      const res = await fetch(`/api/members/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
+      const { data } = await axios.delete(`/api/members/${id}`);
+
       refetch();
+
+      setPopup({
+        show: true,
+        type: "success",
+        message: data.message,
+        isConfirm: false,
+        onConfirm: () => {},
+      });
     } catch (err) {
-      console.error(err);
+      if (axios.isAxiosError(err)) {
+        setPopup({
+          show: true,
+          type: "error",
+          message: err.response?.data?.message ?? "Failed to delete member.",
+          isConfirm: false,
+          onConfirm: () => {},
+        });
+      }
     }
   };
 
-  const confirmDelete = (id: string, name: string) =>
-    setPopup({
-      show: true,
-      type: "success",
-      message: `Delete ${name}?`,
-      isConfirm: true,
-      onConfirm: () => {
-        deleteMember(id);
-        setPopup((p) => ({ ...p, show: false }));
-      },
-    });
-
-  if (isLoading)
+  if (isLoading) {
     return (
       <div className="flex justify-center py-20">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">
           Members{" "}
-          <span className="text-neutral-500 text-sm font-normal ml-2">
-            ({pagination?.total ?? 0})
+          <span className="ml-2 text-sm font-normal text-neutral-500">
+            ({pagination?.total ?? members.length})
           </span>
         </h2>
+
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl font-semibold text-sm hover:bg-neutral-200 transition-all"
+          className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200"
         >
-          <Plus className="w-4 h-4" /> Add Member
+          <Plus className="h-4 w-4" />
+          Add Member
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {members.map((m: any) => (
-          <div
-            key={m.id}
-            className="group bg-white/3 border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all"
-          >
-            <div className="relative h-36 overflow-hidden bg-white/5">
-              <img
-                src={m.img}
-                alt={m.name}
-                className="w-full h-full object-cover object-top"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/placeholder.jpg";
-                }}
-              />
-              <div className="absolute inset-0 bg-linear-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3 gap-2">
-                <button
-                  onClick={() => openEdit(m)}
-                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg text-white hover:bg-white/30"
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => confirmDelete(m.id, m.name)}
-                  className="p-2 bg-red-500/30 backdrop-blur-sm rounded-lg text-red-300 hover:bg-red-500/50"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-            <div className="p-3">
-              <p className="text-white font-semibold text-sm truncate">
-                {m.name}
-              </p>
-              <p className="text-neutral-500 text-xs">{m.role}</p>
-              <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-white/5 text-neutral-500 text-[10px] uppercase">
-                {m.category}
-              </span>
-            </div>
-          </div>
-        ))}
+      <div className="space-y-10">
+        <MemberSection
+          title="Current Members"
+          members={current}
+          onEdit={openEdit}
+        />
+        <MemberSection title="Alumni" members={alumni} onEdit={openEdit} />
+        <MemberSection title="Advisors" members={advisors} onEdit={openEdit} />
       </div>
 
       {pagination && (
@@ -318,16 +462,21 @@ const AdminMembers = () => {
           onSubmit={onSubmit}
         />
       )}
+
       <Popup
         show={popup.show}
         type={popup.type}
         message={popup.message}
         isConfirm={popup.isConfirm}
         onConfirm={popup.onConfirm}
-        onClose={() => setPopup((p) => ({ ...p, show: false }))}
+        onClose={() =>
+          setPopup((prev) => ({
+            ...prev,
+            show: false,
+          }))
+        }
       />
     </div>
   );
 };
-
 export default AdminMembers;

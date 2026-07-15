@@ -29,6 +29,8 @@ import AdminGallery from "../../components/dashboard/AdminGallery";
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "members", label: "Members", icon: Users },
+  { id: "advisors", label: "Advisors", icon: Users },
+  { id: "alumni", label: "Alumni", icon: Users },
   { id: "events", label: "Events", icon: Calendar },
   { id: "event-regs", label: "Event Registrations", icon: User },
   { id: "sankalp", label: "Sankalp Events", icon: Trophy },
@@ -337,7 +339,9 @@ const AdminDashboard = () => {
         )}
 
         <div className="mt-8">
-          {activeTab === "members" && <AdminMembers />}
+          {activeTab === "members" && <AdminMembers role="MEMBER" />}
+          {activeTab === "advisors" && <AdminMembers role="ADVISOR" />}
+          {activeTab === "alumni" && <AdminMembers role="ALUMNI" />}
           {activeTab === "events" && <AdminEvents />}
           {activeTab === "event-regs" && <AdminEventRegistrations />}
           {activeTab === "sankalp" && <AdminSankalpEvents />}
