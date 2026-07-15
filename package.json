@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prepare": "husky",
+    "prepare": "node -e \"try { if (process.env.NODE_ENV !== 'production') { require('husky').install(); } } catch (e) { console.log('Husky skipped in this environment'); }\"",
     "format": "prettier --write .",
     "signup-admin": "tsx scripts/admin-signup.ts"
   },
