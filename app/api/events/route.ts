@@ -1,6 +1,9 @@
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
+import { EventStatusType, EventType } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,38 +15,54 @@ export async function POST(request: NextRequest) {
 
     const user = auth.user;
 
-    const {
-      title,
-      description,
-      type,
-      startAt,
-      endAt,
-      venue,
-      registrationStart,
-      registrationEnd,
-      capacity,
-    } = await request.json();
+    const formData = await request.formData();
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string | null;
+    const type = formData.get("type") as EventType;
+    const status = (formData.get("status") as EventStatusType) || undefined;
+    const startAt = formData.get("startAt") as string;
+    const endAt = formData.get("endAt") as string | null;
+    const venue = formData.get("venue") as string | null;
+    const registrationStart = formData.get("registrationStart") as
+      string | null;
+    const registrationEnd = formData.get("registrationEnd") as string | null;
+    const capacity = formData.get("capacity") as string | null;
+
+    const image = formData.get("image") as File | null;
 
     if (!title) {
       return Response.json(
         { success: false, message: "Title is required" },
         { status: 400 }
       );
-    } else if (!type) {
+    }
+
+    if (!type) {
       return Response.json(
         { success: false, message: "Type is required" },
         { status: 400 }
       );
-    } else if (!startAt) {
+    }
+
+    if (!startAt) {
       return Response.json(
         { success: false, message: "Start date is required" },
         { status: 400 }
       );
-    } else if (!user) {
+    }
+
+    if (!user) {
       return Response.json(
         { success: false, message: "User not authorized" },
         { status: 403 }
       );
+    }
+
+    let imageUrl: string | null = null;
+
+    if (image && image.size > 0) {
+      imageUrl = await uploadImageToCloudinary(image, "event-images");
     }
 
     const event = await prisma.event.create({
@@ -51,35 +70,38 @@ export async function POST(request: NextRequest) {
         title,
         description,
         type,
-        startAt,
-        endAt,
+        imageUrl,
+        status,
+        startAt: new Date(startAt),
+        endAt: endAt ? new Date(endAt) : null,
         venue,
-        registrationStart,
-        registrationEnd,
-        capacity,
-        createdBy: user?.id,
+        registrationStart: registrationStart
+          ? new Date(registrationStart)
+          : null,
+        registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+        capacity: capacity ? Number(capacity) : null,
+        createdBy: user.id,
       },
     });
+
+    revalidateTag("events", "max");
 
     return Response.json(
       {
         success: true,
         message: `Event ${event.title} registered successfully`,
       },
-      {
-        status: 201,
-      }
+      { status: 201 }
     );
   } catch (error) {
     console.error("Failed in registering event", error);
+
     return Response.json(
       {
         success: false,
         message: "Failed to register event",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

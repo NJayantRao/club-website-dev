@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { EventType } from "@prisma/client";
+import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 
 export async function PATCH(
   request: NextRequest,
@@ -12,6 +14,7 @@ export async function PATCH(
     if (!auth.success) {
       return auth.response;
     }
+
     const { id } = await params;
 
     if (!id) {
@@ -24,14 +27,52 @@ export async function PATCH(
       );
     }
 
-    const data = await request.json();
+    const formData = await request.formData();
+
+    const title = formData.get("title") as string | null;
+    const description = formData.get("description") as string | null;
+    const type = formData.get("type") as EventType | null;
+    const startAt = formData.get("startAt") as string | null;
+    const endAt = formData.get("endAt") as string | null;
+    const venue = formData.get("venue") as string | null;
+    const registrationStart = formData.get("registrationStart") as
+      string | null;
+    const registrationEnd = formData.get("registrationEnd") as string | null;
+    const capacity = formData.get("capacity") as string | null;
+
+    const image = formData.get("image") as File | null;
+
+    let imageUrl: string | undefined;
+
+    if (image && image.size > 0) {
+      imageUrl = await uploadImageToCloudinary(image, "event-images");
+    }
 
     const event = await prisma.event.update({
       where: {
         id,
       },
       data: {
-        ...data,
+        ...(title !== null && { title }),
+        ...(description !== null && { description }),
+        ...(type !== null && { type }),
+        ...(startAt !== null && { startAt: new Date(startAt) }),
+        ...(endAt !== null && {
+          endAt: endAt ? new Date(endAt) : null,
+        }),
+        ...(venue !== null && { venue }),
+        ...(registrationStart !== null && {
+          registrationStart: registrationStart
+            ? new Date(registrationStart)
+            : null,
+        }),
+        ...(registrationEnd !== null && {
+          registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+        }),
+        ...(capacity !== null && {
+          capacity: capacity ? Number(capacity) : null,
+        }),
+        ...(imageUrl && { imageUrl }),
       },
     });
 

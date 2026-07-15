@@ -11,8 +11,8 @@ model Member {
   name         String
   email        String        @unique
   phone        String?
-  role         Role        @default(MEMBER)
-  designation  String?     
+  role         Role          @default(MEMBER)
+  designation  String?
   year         String?
   skills       String[]
   createdAt    DateTime      @default(now())
@@ -35,6 +35,8 @@ model Event {
   id                String           @id @default(uuid())
   title             String
   description       String?
+  status            EventStatusType  @default(UPCOMING)
+  imageUrl          String?
   type              EventType
   startAt           DateTime
   endAt             DateTime?
@@ -131,6 +133,13 @@ enum EventType {
   TECH
   NON_TECH
   RECRUITMENT
+}
+
+enum EventStatusType {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELED
 }
 
 enum FieldType {
