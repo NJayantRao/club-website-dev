@@ -105,7 +105,7 @@ export default function EventDetailsModal({
             </Link>
           ) : (
             <Link
-              href={`/register/${event.id}`}
+              href={`/events/${event.id}/register`}
               className="block w-full rounded-2xl bg-white py-4 text-center font-bold text-black transition-all hover:bg-neutral-200"
             >
               Register Now
