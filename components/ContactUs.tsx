@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { z } from "zod";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
+import axios from "axios";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  personalEmail: z.string().email("Enter a valid email address"),
+  email: z.string().email("Enter a valid email address"),
   phoneNo: z.string().min(10, "Enter a valid phone number").max(15),
   message: z.string().min(10, "Message must be at least 10 characters"),
   type: z.literal("contact"),
@@ -15,26 +16,13 @@ const contactSchema = z.object({
 type ContactFormData = z.infer<typeof contactSchema>;
 
 const submitContact = async (data: ContactFormData) => {
-  const res = await fetch("/api/recruitment", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.message || "Failed to send");
-  }
-
-  return res.json();
+  await axios.post("/api/contact-us", data);
 };
 
 const ContactUs = () => {
   const [formData, setFormData] = useState<ContactFormData>({
     name: "",
-    personalEmail: "",
+    email: "",
     phoneNo: "",
     message: "",
     type: "contact",
@@ -97,7 +85,7 @@ const ContactUs = () => {
 
       setFormData({
         name: "",
-        personalEmail: "",
+        email: "",
         phoneNo: "",
         message: "",
         type: "contact",
@@ -201,12 +189,7 @@ const ContactUs = () => {
             )}
 
             {field("Full Name", "name", "text", "Your name")}
-            {field(
-              "Email Address",
-              "personalEmail",
-              "email",
-              "you@example.com"
-            )}
+            {field("Email Address", "email", "email", "you@example.com")}
             {field("Phone Number", "phoneNo", "tel", "+91 00000 00000")}
 
             <div className="space-y-2">
