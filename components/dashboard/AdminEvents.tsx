@@ -1,22 +1,40 @@
 "use client";
-import React, { useState } from "react";
-import { Plus, Edit2, Trash2, X, Calendar, MapPin, Users } from "lucide-react";
-import { Pagination } from "@/components/ui/Pagination";
+
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Plus, Edit2, Trash2 } from "lucide-react";
+import { EventStatusType, EventType } from "@prisma/client";
+
 import Popup from "../ui/Popup";
-// Local simple list loader replaced useAdminList hook
-const useAdminList = (url: string) => {
-  const [data, setData] = React.useState<any[]>([]);
-  const [pagination, setPagination] = React.useState<any | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
+import EventModal, { EventFormData } from "../ui/EventModal";
+import { Pagination } from "@/components/ui/Pagination";
+import { PopupType } from "./AdminMembers";
+
+interface PopupState {
+  show: boolean;
+  type: PopupType;
+  message: string;
+  isConfirm: boolean;
+  onConfirm: () => void;
+}
+const LIMIT = 12;
+
+const useAdminEvents = (url: string) => {
+  const [data, setData] = useState<any[]>([]);
+  const [pagination, setPagination] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     setIsLoading(true);
+
     try {
-      const res = await fetch(url);
-      const json = await res.json();
-      setData(json.data || []);
-      setPagination(json.pagination || null);
-    } catch (e) {
+      const { data } = await axios.get(url);
+
+      setData(data.events ?? []);
+      setPagination(data.pagination ?? null);
+    } catch (err) {
+      console.error(err);
+
       setData([]);
       setPagination(null);
     } finally {
@@ -24,260 +42,346 @@ const useAdminList = (url: string) => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchData();
   }, [url]);
 
-  return { data, pagination, isLoading, refetch: fetchData } as const;
+  return {
+    data,
+    pagination,
+    isLoading,
+    refetch: fetchData,
+  } as const;
 };
 
-// Simple validation to replace adminValidation
 type FieldErrors = Record<string, string>;
-type EventFormData = any;
-const validateEvent = (f: EventFormData) => {
-  const errs: FieldErrors = {};
-  if (!f.name) errs.name = "Name is required";
-  if (!f.venue) errs.venue = "Venue is required";
-  return errs;
-};
-
-const LIMIT = 10;
-const EVENT_TYPES = ["general", "sankalp", "workshop", "hackathon"] as const;
-const STATUSES = ["upcoming", "completed"] as const;
 
 const EMPTY_FORM: EventFormData = {
-  name: "",
-  venue: "",
+  title: "",
   description: "",
-  eventDate: "",
-  startTime: "",
-  endTime: "",
-  registrationCloseAt: "",
-  eventType: "general",
-  status: "upcoming",
-  capacity: 100,
-  maxTeamSize: "",
-  rules: "",
+  type: EventType.TECH,
+  status: EventStatusType.UPCOMING,
+  venue: "",
+  startAt: "",
+  endAt: "",
+  registrationStart: "",
+  registrationEnd: "",
+  capacity: "",
 };
 
-const inputClass = (hasError: boolean) =>
-  `w-full bg-white/5 border rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-all ${hasError ? "border-red-500/50" : "border-white/10 focus:border-white/20"}`;
+const validateEvent = (form: EventFormData) => {
+  const errors: FieldErrors = {};
+
+  if (!form.title.trim()) {
+    errors.title = "Title is required";
+  }
+
+  if (!form.type) {
+    errors.type = "Type is required";
+  }
+
+  if (!form.startAt) {
+    errors.startAt = "Start date is required";
+  }
+
+  return errors;
+};
 
 const AdminEvents = () => {
   const [page, setPage] = useState(1);
+
   const {
     data: events,
     pagination,
     isLoading,
     refetch,
-  } = useAdminList(`/api/event?page=${page}&limit=${LIMIT}`);
+  } = useAdminEvents(`/api/events?page=${page}&limit=${LIMIT}`);
 
   const [showModal, setShowModal] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
+
+  const [eventId, setEventId] = useState<string | null>(null);
+
   const [form, setForm] = useState<EventFormData>(EMPTY_FORM);
+
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [isSaving, setIsSaving] = useState(false);
-  const [popup, setPopup] = useState({
+
+  const [popup, setPopup] = useState<PopupState>({
     show: false,
-    type: "success" as const,
+    type: "success",
     message: "",
     isConfirm: false,
     onConfirm: () => {},
   });
 
-  const updateField = (key: keyof EventFormData, value: string | number) =>
-    setForm((f: EventFormData) => ({ ...f, [key]: value }));
+  const updateField = (
+    key: keyof EventFormData,
+    value: string | EventType | EventStatusType
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
 
   const openAdd = () => {
+    setEventId(null);
     setForm(EMPTY_FORM);
     setErrors({});
-    setEditId(null);
-    setPhotoFiles([]);
+    setImageFile(null);
+    setImagePreview(null);
     setShowModal(true);
   };
 
-  const openEdit = (ev: any) => {
-    setEditId(ev.id);
+  const openEdit = (event: any) => {
+    setEventId(event.id);
+
     setErrors({});
+
     setForm({
-      name: ev.name ?? "",
-      venue: ev.venue ?? "",
-      description: ev.description ?? "",
-      eventDate: ev.eventDate ? ev.eventDate.slice(0, 16) : "",
-      startTime: ev.startTime ? ev.startTime.slice(0, 16) : "",
-      endTime: ev.endTime ? ev.endTime.slice(0, 16) : "",
-      registrationCloseAt: ev.registrationCloseAt
-        ? ev.registrationCloseAt.slice(0, 16)
+      title: event.title ?? "",
+      description: event.description ?? "",
+      type: event.type,
+      status: event.status,
+      venue: event.venue ?? "",
+
+      startAt: event.startAt
+        ? new Date(event.startAt).toISOString().slice(0, 16)
         : "",
-      eventType: ev.eventType ?? "general",
-      status: ev.status ?? "upcoming",
-      capacity: ev.capacity ?? 100,
-      maxTeamSize: ev.maxTeamSize ?? "",
-      rules: ev.rules ?? "",
+
+      endAt: event.endAt
+        ? new Date(event.endAt).toISOString().slice(0, 16)
+        : "",
+
+      registrationStart: event.registrationStart
+        ? new Date(event.registrationStart).toISOString().slice(0, 16)
+        : "",
+
+      registrationEnd: event.registrationEnd
+        ? new Date(event.registrationEnd).toISOString().slice(0, 16)
+        : "",
+
+      capacity: event.capacity?.toString() ?? "",
     });
-    setPhotoFiles([]);
+
+    setImagePreview(event.imageUrl ?? null);
+    setImageFile(null);
     setShowModal(true);
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     const validationErrors = validateEvent(form);
+
     setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
 
     setIsSaving(true);
+
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && v !== "") fd.append(k, String(v));
-      });
-      photoFiles.forEach((f) => fd.append("photos", f));
 
-      const url = editId ? `/api/event/${editId}` : "/api/event";
-      const res = await fetch(url, {
-        method: editId ? "PUT" : "POST",
-        body: fd,
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message);
+      fd.append("title", form.title);
+      fd.append("description", form.description);
+      fd.append("type", form.type);
+      fd.append("status", form.status);
+      fd.append("venue", form.venue);
+
+      fd.append("startAt", form.startAt);
+
+      if (form.endAt) {
+        fd.append("endAt", form.endAt);
       }
 
+      if (form.registrationStart) {
+        fd.append("registrationStart", form.registrationStart);
+      }
+
+      if (form.registrationEnd) {
+        fd.append("registrationEnd", form.registrationEnd);
+      }
+
+      if (form.capacity) {
+        fd.append("capacity", form.capacity);
+      }
+
+      if (imageFile) {
+        fd.append("image", imageFile);
+      }
+
+      const url = eventId ? `/api/events/${eventId}` : "/api/events";
+
+      const method = eventId ? "PATCH" : "POST";
+
+      const { data } = await axios({
+        url,
+        method,
+        data: fd,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      await refetch();
+
+      setPopup({
+        show: true,
+        type: "success",
+        message: data.message,
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+
       setShowModal(false);
+      setEventId(null);
       setForm(EMPTY_FORM);
-      setPhotoFiles([]);
-      setEditId(null);
-      refetch();
-      setPopup({
-        show: true,
-        type: "success",
-        message: editId ? "Event updated!" : "Event created!",
-        isConfirm: false,
-        onConfirm: () => {},
-      });
-    } catch (err: any) {
-      setPopup({
-        show: true,
-        type: "success",
-        message: err.message ?? "Something went wrong.",
-        isConfirm: false,
-        onConfirm: () => {},
-      });
+      setErrors({});
+      setImageFile(null);
+      setImagePreview(null);
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        setPopup({
+          show: true,
+          type: "error",
+          message: err.response?.data?.message ?? "Something went wrong.",
+          isConfirm: false,
+          onConfirm: () => {},
+        });
+      } else {
+        setPopup({
+          show: true,
+          type: "error",
+          message: "Something went wrong.",
+          isConfirm: false,
+          onConfirm: () => {},
+        });
+      }
     } finally {
       setIsSaving(false);
     }
   };
 
-  const deleteEvent = async (id: string) => {
-    try {
-      const res = await fetch(`/api/event/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed");
-      refetch();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const confirmDelete = (id: string, name: string) =>
-    setPopup({
-      show: true,
-      type: "success",
-      message: `Delete "${name}"?`,
-      isConfirm: true,
-      onConfirm: () => {
-        deleteEvent(id);
-        setPopup((p) => ({ ...p, show: false }));
-      },
-    });
-
-  if (isLoading)
+  if (isLoading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
       </div>
     );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">
-          Events{" "}
-          <span className="text-neutral-500 text-sm font-normal ml-2">
-            ({pagination?.total ?? 0})
+          Events
+          <span className="ml-2 text-sm font-normal text-neutral-500">
+            ({pagination?.total ?? events.length})
           </span>
         </h2>
+
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl font-semibold text-sm hover:bg-neutral-200 transition-all"
+          className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200"
         >
-          <Plus className="w-4 h-4" /> Add Event
+          <Plus className="h-4 w-4" />
+          Add Event
         </button>
       </div>
 
-      <div className="space-y-3">
-        {events.map((ev: any) => (
+      {/* Event Cards */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {events.map((event) => (
           <div
-            key={ev.id}
-            className="bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-center justify-between gap-4 hover:border-white/20 transition-all"
+            key={event.id}
+            className="group overflow-hidden rounded-2xl border border-white/10 bg-[#111] transition hover:border-white/20"
           >
-            <div className="flex items-center gap-4 min-w-0">
-              {ev.images?.[0] && (
-                <img
-                  src={ev.images[0].imageUrl}
-                  alt=""
-                  className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
-                />
-              )}
-              <div className="min-w-0">
-                <p className="text-white font-semibold text-sm truncate">
-                  {ev.name}
-                </p>
-                <div className="flex flex-wrap gap-3 text-neutral-500 text-xs mt-1">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(ev.eventDate).toLocaleDateString("en-IN")}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {ev.venue}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    Cap: {ev.capacity}
-                  </span>
-                </div>
+            <div className="relative aspect-video overflow-hidden">
+              <img
+                src={event.imageUrl ?? "/placeholder.jpg"}
+                alt={event.title}
+                className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-105"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+
+              {/* Hover Actions */}
+              <div className="absolute right-3 top-3 flex gap-2 opacity-0 transition group-hover:opacity-100">
+                <button
+                  onClick={() => openEdit(event)}
+                  className="rounded-lg bg-black/60 p-2 text-white backdrop-blur transition hover:bg-white hover:text-black"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span
-                className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${ev.status === "upcoming" ? "bg-blue-500/20 text-blue-400" : "bg-neutral-700/50 text-neutral-400"}`}
-              >
-                {ev.status}
-              </span>
-              <span className="px-2 py-1 rounded-lg bg-white/5 text-neutral-400 text-[10px] uppercase">
-                {ev.eventType}
-              </span>
-              <button
-                onClick={() => openEdit(ev)}
-                className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => confirmDelete(ev.id, ev.name)}
-                className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+
+            <div className="space-y-3 p-5">
+              <div>
+                <h3 className="truncate text-lg font-semibold text-white">
+                  {event.title}
+                </h3>
+
+                <p className="mt-1 line-clamp-2 text-sm text-neutral-400">
+                  {event.description || "No description"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-white/10 px-3 py-1 text-xs text-neutral-300">
+                  {event.type}
+                </span>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs ${
+                    event.status === "UPCOMING"
+                      ? "bg-blue-500/20 text-blue-300"
+                      : event.status === "ONGOING"
+                        ? "bg-green-500/20 text-green-300"
+                        : event.status === "COMPLETED"
+                          ? "bg-neutral-500/20 text-neutral-300"
+                          : "bg-red-500/20 text-red-300"
+                  }`}
+                >
+                  {event.status}
+                </span>
+              </div>
+
+              <div className="space-y-1 text-xs text-neutral-500">
+                <p>
+                  <span className="text-neutral-400">Start:</span>{" "}
+                  {new Date(event.startAt).toLocaleString()}
+                </p>
+
+                {event.venue && (
+                  <p>
+                    <span className="text-neutral-400">Venue:</span>{" "}
+                    {event.venue}
+                  </p>
+                )}
+
+                {event.capacity && (
+                  <p>
+                    <span className="text-neutral-400">Capacity:</span>{" "}
+                    {event.capacity}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         ))}
-        {events.length === 0 && (
-          <p className="text-neutral-500 text-center py-16">No events yet.</p>
-        )}
       </div>
 
+      {/* Pagination */}
       {pagination && (
         <Pagination
           page={pagination.page}
@@ -288,269 +392,35 @@ const AdminEvents = () => {
         />
       )}
 
+      {/* Event Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-white">
-                {editId ? "Edit Event" : "Create Event"}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 text-neutral-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Event Name
-                  </label>
-                  <input
-                    className={inputClass(!!errors.name)}
-                    value={form.name}
-                    onChange={(e) => updateField("name", e.target.value)}
-                  />
-                  {errors.name && (
-                    <p className="text-red-400 text-xs mt-1">{errors.name}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Venue
-                  </label>
-                  <input
-                    className={inputClass(!!errors.venue)}
-                    value={form.venue}
-                    onChange={(e) => updateField("venue", e.target.value)}
-                  />
-                  {errors.venue && (
-                    <p className="text-red-400 text-xs mt-1">{errors.venue}</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  className={inputClass(!!errors.description) + " resize-none"}
-                  value={form.description}
-                  onChange={(e) => updateField("description", e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Event Date
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass(!!errors.eventDate)}
-                    value={form.eventDate}
-                    onChange={(e) => updateField("eventDate", e.target.value)}
-                  />
-                  {errors.eventDate && (
-                    <p className="text-red-400 text-xs mt-1">
-                      {errors.eventDate}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass(!!errors.startTime)}
-                    value={form.startTime}
-                    onChange={(e) => updateField("startTime", e.target.value)}
-                  />
-                  {errors.startTime && (
-                    <p className="text-red-400 text-xs mt-1">
-                      {errors.startTime}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass(!!errors.endTime)}
-                    value={form.endTime}
-                    onChange={(e) => updateField("endTime", e.target.value)}
-                  />
-                  {errors.endTime && (
-                    <p className="text-red-400 text-xs mt-1">
-                      {errors.endTime}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Registration Closes
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className={inputClass(!!errors.registrationCloseAt)}
-                    value={form.registrationCloseAt}
-                    onChange={(e) =>
-                      updateField("registrationCloseAt", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Type
-                  </label>
-                  <select
-                    className={inputClass(false)}
-                    value={form.eventType}
-                    onChange={(e) => updateField("eventType", e.target.value)}
-                  >
-                    {EVENT_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Status
-                  </label>
-                  <select
-                    className={inputClass(false)}
-                    value={form.status}
-                    onChange={(e) => updateField("status", e.target.value)}
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Capacity
-                  </label>
-                  <input
-                    type="number"
-                    className={inputClass(!!errors.capacity)}
-                    value={form.capacity}
-                    onChange={(e) =>
-                      updateField(
-                        "capacity",
-                        e.target.value === "" ? "" : Number(e.target.value)
-                      )
-                    }
-                  />
-                  {errors.capacity && (
-                    <p className="text-red-400 text-xs mt-1">
-                      {errors.capacity}
-                    </p>
-                  )}
-                </div>
-                {form.eventType === "hackathon" && (
-                  <div>
-                    <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                      Max Team Size
-                    </label>
-                    <input
-                      type="number"
-                      className={inputClass(!!errors.maxTeamSize)}
-                      value={form.maxTeamSize}
-                      onChange={(e) =>
-                        updateField(
-                          "maxTeamSize",
-                          e.target.value === "" ? "" : Number(e.target.value)
-                        )
-                      }
-                    />
-                    {errors.maxTeamSize && (
-                      <p className="text-red-400 text-xs mt-1">
-                        {errors.maxTeamSize}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {(form.eventType === "sankalp" ||
-                form.eventType === "hackathon" ||
-                form.eventType === "workshop") && (
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                    Rules
-                  </label>
-                  <textarea
-                    rows={3}
-                    className={inputClass(false) + " resize-none"}
-                    value={form.rules}
-                    onChange={(e) => updateField("rules", e.target.value)}
-                  />
-                </div>
-              )}
-
-              <div>
-                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                  Photos
-                </label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="w-full text-neutral-400 text-sm"
-                  onChange={(e) =>
-                    setPhotoFiles(Array.from(e.target.files ?? []))
-                  }
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-3 border border-white/10 rounded-xl text-neutral-400 hover:text-white transition-all text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="flex-1 py-3 bg-white text-black rounded-xl font-semibold text-sm hover:bg-neutral-200 transition-all disabled:opacity-50"
-                >
-                  {isSaving
-                    ? "Saving..."
-                    : editId
-                      ? "Update Event"
-                      : "Create Event"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <EventModal
+          eventId={eventId}
+          form={form}
+          errors={errors}
+          imagePreview={imagePreview}
+          isSaving={isSaving}
+          updateField={updateField}
+          setImageFile={setImageFile}
+          setImagePreview={setImagePreview}
+          onClose={() => setShowModal(false)}
+          onSubmit={onSubmit}
+        />
       )}
 
+      {/* Popup */}
       <Popup
         show={popup.show}
         type={popup.type}
         message={popup.message}
         isConfirm={popup.isConfirm}
         onConfirm={popup.onConfirm}
-        onClose={() => setPopup((p) => ({ ...p, show: false }))}
+        onClose={() =>
+          setPopup((prev) => ({
+            ...prev,
+            show: false,
+          }))
+        }
       />
     </div>
   );

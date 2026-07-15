@@ -81,7 +81,7 @@ type MemberFormData = {
   skills: string;
 };
 
-type PopupType = "success" | "error" | "confirm";
+export type PopupType = "success" | "error" | "confirm";
 
 interface PopupState {
   show: boolean;

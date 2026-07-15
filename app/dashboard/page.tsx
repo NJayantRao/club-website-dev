@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -18,9 +18,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import AdminMembers from "../../components/dashboard/AdminMembers";
 import AdminEvents from "../../components/dashboard/AdminEvents";
-import AdminSankalpEvents from "../../components/dashboard/AdminSankalpEvents";
-import AdminEventRegistrations from "../../components/dashboard/AdminEventRegistrations";
-import AdminSankalpRegistrations from "../../components/dashboard/AdminSankalpRegistrations";
 import AdminQueries from "../../components/dashboard/AdminQueries";
 import AdminRecruitment from "../../components/dashboard/AdminRecruitment";
 import AdminAchievements from "../../components/dashboard/AdminAchievements";
@@ -32,9 +29,6 @@ const navItems = [
   { id: "advisors", label: "Advisors", icon: Users },
   { id: "alumni", label: "Alumni", icon: Users },
   { id: "events", label: "Events", icon: Calendar },
-  { id: "event-regs", label: "Event Registrations", icon: User },
-  { id: "sankalp", label: "Sankalp Events", icon: Trophy },
-  { id: "sankalp-regs", label: "Sankalp Registrations", icon: User },
   { id: "achievements", label: "Achievements", icon: Trophy },
   { id: "gallery", label: "Gallery", icon: ImageIcon },
   { id: "queries", label: "Queries", icon: MessageSquare },
@@ -343,9 +337,6 @@ const AdminDashboard = () => {
           {activeTab === "advisors" && <AdminMembers role="ADVISOR" />}
           {activeTab === "alumni" && <AdminMembers role="ALUMNI" />}
           {activeTab === "events" && <AdminEvents />}
-          {activeTab === "event-regs" && <AdminEventRegistrations />}
-          {activeTab === "sankalp" && <AdminSankalpEvents />}
-          {activeTab === "sankalp-regs" && <AdminSankalpRegistrations />}
           {activeTab === "queries" && <AdminQueries />}
           {activeTab === "recruitment" && <AdminRecruitment />}
           {activeTab === "achievements" && <AdminAchievements />}
