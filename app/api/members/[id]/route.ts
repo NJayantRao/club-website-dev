@@ -5,6 +5,63 @@ import { requireAdminAuth } from "@/lib/authorize-admin";
 import { Role } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAdminAuth();
+
+    if (!auth.success) {
+      return auth.response;
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Member ID is required.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const member = await prisma.member.delete({
+      where: {
+        id,
+      },
+    });
+
+    revalidateTag("members", "max");
+
+    return Response.json(
+      {
+        success: true,
+        message: `${member.name} deleted successfully.`,
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("Failed to delete member:", error);
+
+    return Response.json(
+      {
+        success: false,
+        message: "Failed to delete member.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

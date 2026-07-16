@@ -1,5 +1,72 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
+import { requireAdminAuth } from "@/lib/authorize-admin";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAdminAuth();
+
+    if (!auth.success) {
+      return auth.response;
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Event id is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+
+    const page = parseInt(searchParams.get("page")!) || 1;
+    const limit = parseInt(searchParams.get("limit")!) || 15;
+    const skip = (page - 1) * limit;
+
+    const [responses, total] = await Promise.all([
+      prisma.eventResponse.findMany({
+        where: { eventId: id },
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.eventResponse.count({ where: { eventId: id } }),
+    ]);
+
+    return Response.json(
+      {
+        success: true,
+        message: "Responses fetched successfully",
+        data: responses,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Failed to fetch responses:", error);
+
+    return Response.json(
+      {
+        success: false,
+        message: "Failed to fetch responses",
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(
   request: NextRequest,

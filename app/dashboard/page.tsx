@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -18,9 +18,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import AdminMembers from "../../components/dashboard/AdminMembers";
 import AdminEvents from "../../components/dashboard/AdminEvents";
-import AdminSankalpEvents from "../../components/dashboard/AdminSankalpEvents";
-import AdminEventRegistrations from "../../components/dashboard/AdminEventRegistrations";
-import AdminSankalpRegistrations from "../../components/dashboard/AdminSankalpRegistrations";
 import AdminQueries from "../../components/dashboard/AdminQueries";
 import AdminRecruitment from "../../components/dashboard/AdminRecruitment";
 import AdminAchievements from "../../components/dashboard/AdminAchievements";
@@ -29,10 +26,9 @@ import AdminGallery from "../../components/dashboard/AdminGallery";
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "members", label: "Members", icon: Users },
+  { id: "advisors", label: "Advisors", icon: Users },
+  { id: "alumni", label: "Alumni", icon: Users },
   { id: "events", label: "Events", icon: Calendar },
-  { id: "event-regs", label: "Event Registrations", icon: User },
-  { id: "sankalp", label: "Sankalp Events", icon: Trophy },
-  { id: "sankalp-regs", label: "Sankalp Registrations", icon: User },
   { id: "achievements", label: "Achievements", icon: Trophy },
   { id: "gallery", label: "Gallery", icon: ImageIcon },
   { id: "queries", label: "Queries", icon: MessageSquare },
@@ -103,7 +99,7 @@ const SidebarContent = ({
     <div className="mt-6 pt-4 border-t border-white/10">
       <div className="px-4 py-2 mb-2">
         <p className="text-xs text-neutral-500 truncate">
-          {session?.user?.name}
+          {session?.user?.email}
         </p>
         <p className="text-[10px] text-neutral-600 truncate">
           {session?.user?.email}
@@ -121,10 +117,10 @@ const SidebarContent = ({
 
 const fetchStats = async () => {
   const [mRes, eRes, qRes, rRes] = await Promise.all([
-    fetch("/api/members?limit=1"),
-    fetch("/api/event?limit=1"),
-    fetch("/api/recruitment?type=contact&limit=1"),
-    fetch("/api/recruitment?type=recruitment&limit=1"),
+    fetch("/api/our-team?role=ALL&limit=1"),
+    fetch("/api/events?limit=1"),
+    fetch("/api/contact-us?limit=1"),
+    fetch("/api/recruitment?limit=1"),
   ]);
   const [m, e, q, r] = await Promise.all([
     mRes.json(),
@@ -140,15 +136,21 @@ const fetchStats = async () => {
   };
 };
 
-const AdminDashboard = () => {
+const DashboardContent = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
       router.push("/sign-in");
     },
   });
-  const [activeTab, setActiveTab] = useState("dashboard");
+
+  const [activeTab, setActiveTab] = useState(() => {
+    const requestedTab = searchParams.get("tab");
+    const isValidTab = navItems.some((item) => item.id === requestedTab);
+    return isValidTab ? (requestedTab as string) : "dashboard";
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [stats, setStats] = useState({
@@ -158,7 +160,7 @@ const AdminDashboard = () => {
     recruits: 0,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     if (status === "authenticated") {
       fetchStats()
@@ -246,7 +248,7 @@ const AdminDashboard = () => {
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold tracking-tight mb-2">
               {activeTab === "dashboard"
-                ? `Welcome back, ${session?.user?.name}`
+                ? `Welcome back, ${session?.user?.email}`
                 : navItems.find((i) => i.id === activeTab)?.label}
             </h1>
             <p className="text-neutral-500 text-sm lg:text-base">
@@ -336,11 +338,10 @@ const AdminDashboard = () => {
         )}
 
         <div className="mt-8">
-          {activeTab === "members" && <AdminMembers />}
+          {activeTab === "members" && <AdminMembers role="MEMBER" />}
+          {activeTab === "advisors" && <AdminMembers role="ADVISOR" />}
+          {activeTab === "alumni" && <AdminMembers role="ALUMNI" />}
           {activeTab === "events" && <AdminEvents />}
-          {activeTab === "event-regs" && <AdminEventRegistrations />}
-          {activeTab === "sankalp" && <AdminSankalpEvents />}
-          {activeTab === "sankalp-regs" && <AdminSankalpRegistrations />}
           {activeTab === "queries" && <AdminQueries />}
           {activeTab === "recruitment" && <AdminRecruitment />}
           {activeTab === "achievements" && <AdminAchievements />}
@@ -348,6 +349,20 @@ const AdminDashboard = () => {
         </div>
       </main>
     </div>
+  );
+};
+
+const AdminDashboard = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-black">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 };
 

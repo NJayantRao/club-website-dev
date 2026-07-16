@@ -132,3 +132,64 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAdminAuth();
+
+    if (!auth.success) {
+      return auth.response;
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Contact inquiry id is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const inquiry = await prisma.contactInquiry.findUnique({
+      where: { id },
+    });
+
+    if (!inquiry) {
+      return Response.json(
+        {
+          success: false,
+          message: "Contact inquiry not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    await prisma.contactInquiry.delete({
+      where: { id },
+    });
+
+    return Response.json(
+      {
+        success: true,
+        message: "Contact inquiry deleted successfully",
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Failed in deleting contact inquiry", error);
+
+    return Response.json(
+      {
+        success: false,
+        message: "Failed to delete contact inquiry",
+      },
+      { status: 500 }
+    );
+  }
+}

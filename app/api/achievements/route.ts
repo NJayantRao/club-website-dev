@@ -123,25 +123,28 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const skip = (page - 1) * limit;
 
-    const achievements = await prisma.achievement.findMany({
-      skip,
-      take: limit,
-      orderBy: { [sortBy]: sortOrder },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        achievedAt: true,
-        imageUrl: true,
-        tag: true,
-      },
-    });
+    const [achievements, total] = await Promise.all([
+      prisma.achievement.findMany({
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          achievedAt: true,
+          imageUrl: true,
+          tag: true,
+        },
+      }),
+      prisma.achievement.count(),
+    ]);
 
     return Response.json(
       {
         success: true,
         message: "Achievement fetched successfully",
-        achievements: achievements.map((achievement) => ({
+        data: achievements.map((achievement) => ({
           id: achievement.id,
           name: achievement.title,
           description: achievement.description ?? "",
@@ -151,6 +154,12 @@ export async function GET(request: NextRequest) {
             ? [{ imageUrl: achievement.imageUrl }]
             : [],
         })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       },
       {
         status: 200,

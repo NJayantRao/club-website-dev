@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const email = formData.get("email") as string;
     const phone = (formData.get("phone") as string | null) ?? null;
     const role = (formData.get("role") as Role) || undefined;
+    const year = (formData.get("year") as string | null) ?? null;
     const image = formData.get("image") as File | null;
     const skills = JSON.parse(
       (formData.get("skills") as string) || "[]"
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
         phone,
         imageUrl,
         role,
+        year,
         skills,
       },
     });
