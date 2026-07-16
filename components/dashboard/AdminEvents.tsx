@@ -9,6 +9,7 @@ import Popup from "../ui/Popup";
 import EventModal, { EventFormData } from "../ui/EventModal";
 import { Pagination } from "@/components/ui/Pagination";
 import { PopupType } from "./AdminMembers";
+import Link from "next/link";
 
 interface PopupState {
   show: boolean;
@@ -375,6 +376,14 @@ const AdminEvents = () => {
                     {event.capacity}
                   </p>
                 )}
+                <div className="mt-4 flex gap-2">
+                  <Link
+                    href={`/dashboard/events/${event.id}`}
+                    className="flex-1 rounded-xl bg-white px-4 py-2 text-center text-sm font-semibold text-black transition hover:bg-neutral-200"
+                  >
+                    Manage Event
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

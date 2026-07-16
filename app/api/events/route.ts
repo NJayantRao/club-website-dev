@@ -114,24 +114,46 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit")!) || 5;
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
+    const type = searchParams.get("type");
+    const status = searchParams.get("status");
     const skip = (page - 1) * limit;
 
-    const events = await prisma.event.findMany({
-      skip,
-      take: limit,
-      orderBy: {
-        [sortBy]: sortOrder as "asc" | "desc",
-      },
-    });
+    const where = {
+      ...(type ? { type: type as EventType } : {}),
+      ...(status ? { status: status as EventStatusType } : {}),
+    };
+
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          [sortBy]: sortOrder as "asc" | "desc",
+        },
+        include: {
+          _count: {
+            select: { responses: true },
+          },
+        },
+      }),
+      prisma.event.count({ where }),
+    ]);
 
     return Response.json(
       {
         success: true,
         message: `Event fetched successfully`,
         events,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       },
       {
-        status: 201,
+        status: 200,
       }
     );
   } catch (error) {

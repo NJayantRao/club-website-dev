@@ -123,9 +123,10 @@ const EMPTY_FORM: MemberFormData = {
 interface MemberCardProps {
   member: Member;
   onEdit: (member: Member) => void;
+  onDelete: (member: Member) => void;
 }
 
-const MemberCard = ({ member, onEdit }: MemberCardProps) => (
+const MemberCard = ({ member, onEdit, onDelete }: MemberCardProps) => (
   <div className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-white/20">
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#111]">
       <div className="relative aspect-[4/5] overflow-hidden">
@@ -137,12 +138,20 @@ const MemberCard = ({ member, onEdit }: MemberCardProps) => (
 
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition duration-300">
-          <button
-            onClick={() => onEdit(member)}
-            className="absolute top-3 right-3 rounded-xl bg-white/15 p-2 text-white backdrop-blur-md hover:bg-white hover:text-black transition"
-          >
-            <Edit2 className="h-4 w-4" />
-          </button>
+          <div className="absolute top-3 right-3 flex gap-2">
+            <button
+              onClick={() => onEdit(member)}
+              className="rounded-xl bg-white/15 p-2 text-white backdrop-blur-md hover:bg-white hover:text-black transition"
+            >
+              <Edit2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onDelete(member)}
+              className="rounded-xl bg-white/15 p-2 text-white backdrop-blur-md hover:bg-red-500 transition"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black via-black/70 to-transparent" />
@@ -171,9 +180,15 @@ interface MemberSectionProps {
   title: string;
   members: Member[];
   onEdit: (member: Member) => void;
+  onDelete: (member: Member) => void;
 }
 
-const MemberSection = ({ title, members, onEdit }: MemberSectionProps) => {
+const MemberSection = ({
+  title,
+  members,
+  onEdit,
+  onDelete,
+}: MemberSectionProps) => {
   if (members.length === 0) {
     return null;
   }
@@ -189,7 +204,12 @@ const MemberSection = ({ title, members, onEdit }: MemberSectionProps) => {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {members.map((member) => (
-          <MemberCard key={member.id} member={member} onEdit={onEdit} />
+          <MemberCard
+            key={member.id}
+            member={member}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </div>
@@ -400,6 +420,22 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
     }
   };
 
+  const confirmDelete = (member: Member) => {
+    setPopup({
+      show: true,
+      type: "confirm",
+      message: `Delete ${member.name}?`,
+      isConfirm: true,
+      onConfirm: () => {
+        deleteMember(member.id);
+        setPopup((prev) => ({
+          ...prev,
+          show: false,
+        }));
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -433,9 +469,20 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
           title="Current Members"
           members={current}
           onEdit={openEdit}
+          onDelete={confirmDelete}
         />
-        <MemberSection title="Alumni" members={alumni} onEdit={openEdit} />
-        <MemberSection title="Advisors" members={advisors} onEdit={openEdit} />
+        <MemberSection
+          title="Alumni"
+          members={alumni}
+          onEdit={openEdit}
+          onDelete={confirmDelete}
+        />
+        <MemberSection
+          title="Advisors"
+          members={advisors}
+          onEdit={openEdit}
+          onDelete={confirmDelete}
+        />
       </div>
 
       {pagination && (

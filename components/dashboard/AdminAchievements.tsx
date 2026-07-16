@@ -8,11 +8,16 @@ import { Achievement } from "@prisma/client";
 
 const LIMIT = 10;
 const TYPES = [
-  "general",
-  "competition",
   "hackathon",
+  "competition",
   "certification",
-  "award",
+  "workshop",
+  "internship",
+  "placement",
+  "research",
+  "publication",
+  "open_source",
+  "other",
 ] as const;
 
 const AdminAchievements: React.FC = () => {
@@ -34,7 +39,7 @@ const AdminAchievements: React.FC = () => {
   const initialForm = {
     name: "",
     description: "",
-    achievementTag: "general",
+    achievementTag: "hackathon",
     achievedAt: "",
   };
   const [form, setForm] = useState(initialForm);
@@ -43,7 +48,7 @@ const AdminAchievements: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `/api/achievements/achievements?page=${pageNum}&limit=${LIMIT}`
+        `/api/achievements?page=${pageNum}&limit=${LIMIT}`
       );
       if (!res.ok) return;
       const data = await res.json();
@@ -68,13 +73,13 @@ const AdminAchievements: React.FC = () => {
     setSaving(true);
     try {
       const fd = new FormData();
-      fd.append("name", form.name);
+      fd.append("title", form.name);
       fd.append("description", form.description);
-      fd.append("achievementTag", form.achievementTag);
+      fd.append("tag", form.achievementTag.toUpperCase());
       if (form.achievedAt) fd.append("achievedAt", form.achievedAt);
-      photoFiles.forEach((f) => fd.append("photos", f));
+      if (photoFiles[0]) fd.append("image", photoFiles[0]);
 
-      const res = await fetch("/api/achievements/achievements", {
+      const res = await fetch("/api/achievements", {
         method: "POST",
         body: fd,
       });
@@ -115,7 +120,7 @@ const AdminAchievements: React.FC = () => {
       isConfirm: true,
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/achievements/achievements/${id}`, {
+          const res = await fetch(`/api/achievements/${id}`, {
             method: "DELETE",
           });
           if (!res.ok) throw new Error("Delete failed");
@@ -292,15 +297,14 @@ const AdminAchievements: React.FC = () => {
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                  Photos
+                  Photo
                 </label>
                 <input
                   type="file"
-                  multiple
                   accept="image/*"
                   className="w-full text-neutral-400 text-sm"
                   onChange={(e) =>
-                    setPhotoFiles(Array.from(e.target.files ?? []))
+                    setPhotoFiles(Array.from(e.target.files ?? []).slice(0, 1))
                   }
                 />
               </div>

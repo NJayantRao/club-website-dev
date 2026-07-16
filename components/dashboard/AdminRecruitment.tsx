@@ -12,18 +12,38 @@ import Popup from "../ui/Popup";
 
 const LIMIT = 15;
 
+interface RecruitmentApplication {
+  id: string;
+  name: string;
+  rollNo: string;
+  instituteEmail: string;
+  personalEmail: string;
+  gender: string;
+  branch: string;
+  phoneNo: string;
+  locality: string;
+  techStack: string;
+  isSelected: boolean;
+  createdAt: string;
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 const fetchRecruitment = async (page: number) => {
-  const res = await fetch(
-    `/api/recruitment?type=recruitment&page=${page}&limit=${LIMIT}`
-  );
+  const res = await fetch(`/api/recruitment?page=${page}&limit=${LIMIT}`);
   if (!res.ok) throw new Error("Failed to fetch");
   return res.json();
 };
 
 const AdminRecruitment: React.FC = () => {
   const [page, setPage] = useState(1);
-  const [recruits, setRecruits] = useState<any[]>([]);
-  const [pagination, setPagination] = useState<any>(null);
+  const [recruits, setRecruits] = useState<RecruitmentApplication[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [popup, setPopup] = useState({
@@ -59,13 +79,6 @@ const AdminRecruitment: React.FC = () => {
         body: JSON.stringify({ isSelected }),
       });
       if (!res.ok) throw new Error("Update failed");
-      setPopup({
-        show: true,
-        type: "success",
-        message: "Status updated",
-        isConfirm: false,
-        onConfirm: () => {},
-      });
       load(page);
     } catch (err) {
       console.error(err);
@@ -79,11 +92,43 @@ const AdminRecruitment: React.FC = () => {
     }
   };
 
+  const deleteOne = async (id: string) => {
+    try {
+      const res = await fetch(`/api/recruitment/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      load(page);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to delete.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  const confirmDeleteOne = (id: string, name: string) =>
+    setPopup({
+      show: true,
+      type: "success",
+      message: `Delete application from ${name}?`,
+      isConfirm: true,
+      onConfirm: () => {
+        deleteOne(id);
+        setPopup((p) => ({ ...p, show: false }));
+      },
+    });
+
   const deleteAll = async () => {
     try {
       const res = await fetch("/api/recruitment", { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       load(1);
+      setPage(1);
     } catch (err) {
       console.error(err);
       setPopup({
@@ -138,7 +183,7 @@ const AdminRecruitment: React.FC = () => {
         </p>
       ) : (
         <div className="space-y-3">
-          {recruits.map((r: any) => (
+          {recruits.map((r) => (
             <div
               key={r.id}
               className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden"
@@ -177,6 +222,15 @@ const AdminRecruitment: React.FC = () => {
                         Pending
                       </>
                     )}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      confirmDeleteOne(r.id, r.name);
+                    }}
+                    className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                   {expanded === r.id ? (
                     <ChevronUp className="w-4 h-4 text-neutral-500" />

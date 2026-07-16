@@ -68,22 +68,31 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const skip = (page - 1) * limit;
 
-    const inquiries = await prisma.contactInquiry.findMany({
-      skip,
-      take: limit,
-      orderBy: {
-        [sortBy]: sortOrder as "asc" | "desc",
-      },
-    });
+    const [inquiries, total] = await Promise.all([
+      prisma.contactInquiry.findMany({
+        skip,
+        take: limit,
+        orderBy: {
+          [sortBy]: sortOrder as "asc" | "desc",
+        },
+      }),
+      prisma.contactInquiry.count(),
+    ]);
 
     return Response.json(
       {
         success: true,
         message: "Contact Inquiries fetched successfully",
-        inquiries,
+        data: inquiries,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
       },
       {
-        status: 201,
+        status: 200,
       }
     );
   } catch (error) {

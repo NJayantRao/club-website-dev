@@ -83,3 +83,74 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAdminAuth();
+
+    if (!auth.success) {
+      return auth.response;
+    }
+
+    const { id } = await params;
+
+    if (!id) {
+      return Response.json(
+        {
+          success: false,
+          message: "Achievement id is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const achievement = await prisma.achievement.findUnique({
+      where: { id },
+    });
+
+    if (!achievement) {
+      return Response.json(
+        {
+          success: false,
+          message: "Achievement not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    await prisma.achievement.delete({
+      where: { id },
+    });
+
+    revalidateTag("achievements", "max");
+
+    return Response.json(
+      {
+        success: true,
+        message: "Achievement deleted successfully",
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error("Failed in deleting achievement", error);
+
+    return Response.json(
+      {
+        success: false,
+        message: "Failed to delete achievement",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}

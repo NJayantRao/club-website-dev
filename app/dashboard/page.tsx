@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -117,10 +117,10 @@ const SidebarContent = ({
 
 const fetchStats = async () => {
   const [mRes, eRes, qRes, rRes] = await Promise.all([
-    fetch("/api/members?limit=1"),
-    fetch("/api/event?limit=1"),
-    fetch("/api/recruitment?type=contact&limit=1"),
-    fetch("/api/recruitment?type=recruitment&limit=1"),
+    fetch("/api/our-team?role=ALL&limit=1"),
+    fetch("/api/events?limit=1"),
+    fetch("/api/contact-us?limit=1"),
+    fetch("/api/recruitment?limit=1"),
   ]);
   const [m, e, q, r] = await Promise.all([
     mRes.json(),
@@ -136,8 +136,9 @@ const fetchStats = async () => {
   };
 };
 
-const AdminDashboard = () => {
+const DashboardContent = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
@@ -145,7 +146,11 @@ const AdminDashboard = () => {
     },
   });
 
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState(() => {
+    const requestedTab = searchParams.get("tab");
+    const isValidTab = navItems.some((item) => item.id === requestedTab);
+    return isValidTab ? (requestedTab as string) : "dashboard";
+  });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [stats, setStats] = useState({
@@ -344,6 +349,20 @@ const AdminDashboard = () => {
         </div>
       </main>
     </div>
+  );
+};
+
+const AdminDashboard = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-black">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 };
 

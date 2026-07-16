@@ -23,9 +23,7 @@ const AdminQueries: React.FC = () => {
   const fetchQueries = async (pageNum = page) => {
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `/api/recruitment?type=contact&page=${pageNum}&limit=${LIMIT}`
-      );
+      const res = await fetch(`/api/contact-us?page=${pageNum}&limit=${LIMIT}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setQueries(data.data ?? []);
@@ -51,7 +49,7 @@ const AdminQueries: React.FC = () => {
       isConfirm: true,
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/recruitment/${id}`, {
+          const res = await fetch(`/api/contact-us/${id}`, {
             method: "DELETE",
           });
           if (!res.ok) throw new Error("Delete failed");
@@ -111,16 +109,7 @@ const AdminQueries: React.FC = () => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setPopup({
-                        show: true,
-                        type: "success",
-                        message: `Delete query from ${q.name}?`,
-                        isConfirm: true,
-                        onConfirm: () => {
-                          confirmDeleteQuery(q.id, q.name);
-                          setPopup((p) => ({ ...p, show: false }));
-                        },
-                      });
+                      confirmDeleteQuery(q.id, q.name);
                     }}
                     className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
                   >
@@ -138,7 +127,7 @@ const AdminQueries: React.FC = () => {
                   <div className="flex flex-wrap gap-4 text-xs">
                     <span className="flex items-center gap-1.5 text-neutral-400">
                       <Mail className="w-3 h-3" />
-                      {q.personalEmail}
+                      {q.email}
                     </span>
                     <span className="flex items-center gap-1.5 text-neutral-400">
                       <Phone className="w-3 h-3" />

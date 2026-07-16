@@ -11,18 +11,18 @@ export async function GET(request: NextRequest) {
   const sortOrder = searchParams.get("sortOrder") || "desc";
   const role = searchParams.get("role") || "MEMBER";
 
+  const where = role === "ALL" ? {} : { role: role as Role };
+
   const skip = (page - 1) * limit;
   try {
     const [members, total] = await Promise.all([
       prisma.member.findMany({
-        where: {
-          role: role as Role,
-        },
+        where,
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
       }),
-      prisma.member.count({ where: { role: Role.MEMBER } }),
+      prisma.member.count({ where }),
     ]);
 
     return Response.json(
