@@ -1,4 +1,5 @@
 import { initialEvents } from "@/data/initial-events";
+import axios from "axios";
 import { useState } from "react";
 
 export interface PaginationMeta {
@@ -91,15 +92,9 @@ export function useDeleteEvent() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch(`/api/event/${id}`, {
-        method: "DELETE",
-      });
+      const { data } = await axios.delete(`/api/event/${id}`);
 
-      if (!res.ok) {
-        throw new Error("Failed to delete event");
-      }
-
-      return await res.json();
+      return data.message;
     } catch (err) {
       setError(err as Error);
       throw err;

@@ -144,15 +144,16 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         message: "Achievement fetched successfully",
+        // Field names match the Prisma schema (and the POST/PATCH routes),
+        // so the frontend can use the same `Achievement` type everywhere
+        // instead of a one-off remapped shape.
         data: achievements.map((achievement) => ({
           id: achievement.id,
-          name: achievement.title,
+          title: achievement.title,
           description: achievement.description ?? "",
           achievedAt: achievement.achievedAt.toISOString(),
-          achievementTag: achievement.tag.toLowerCase(),
-          images: achievement.imageUrl
-            ? [{ imageUrl: achievement.imageUrl }]
-            : [],
+          tag: achievement.tag,
+          imageUrl: achievement.imageUrl,
         })),
         pagination: {
           page,

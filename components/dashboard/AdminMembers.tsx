@@ -195,13 +195,6 @@ const MemberSection = ({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-base font-semibold text-white">
-        {title}{" "}
-        <span className="ml-2 text-sm font-normal text-neutral-500">
-          ({members.length})
-        </span>
-      </h3>
-
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
         {members.map((member) => (
           <MemberCard
@@ -449,7 +442,11 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">
-          Members{" "}
+          {role === "MEMBER"
+            ? "Members"
+            : role === "ADVISOR"
+              ? "Advisors"
+              : "Alumni"}{" "}
           <span className="ml-2 text-sm font-normal text-neutral-500">
             ({pagination?.total ?? members.length})
           </span>
@@ -460,29 +457,41 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
           className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-neutral-200"
         >
           <Plus className="h-4 w-4" />
-          Add Member
+          {role === "MEMBER"
+            ? "Add Member"
+            : role === "ADVISOR"
+              ? "Add Advisor"
+              : "Add Alumni"}
         </button>
       </div>
 
       <div className="space-y-10">
-        <MemberSection
-          title="Current Members"
-          members={current}
-          onEdit={openEdit}
-          onDelete={confirmDelete}
-        />
-        <MemberSection
-          title="Alumni"
-          members={alumni}
-          onEdit={openEdit}
-          onDelete={confirmDelete}
-        />
-        <MemberSection
-          title="Advisors"
-          members={advisors}
-          onEdit={openEdit}
-          onDelete={confirmDelete}
-        />
+        {role === "MEMBER" && (
+          <MemberSection
+            title="Current Members"
+            members={current}
+            onEdit={openEdit}
+            onDelete={confirmDelete}
+          />
+        )}
+
+        {role === "ADVISOR" && (
+          <MemberSection
+            title="Advisors"
+            members={advisors}
+            onEdit={openEdit}
+            onDelete={confirmDelete}
+          />
+        )}
+
+        {role === "ALUMNI" && (
+          <MemberSection
+            title="Alumni"
+            members={alumni}
+            onEdit={openEdit}
+            onDelete={confirmDelete}
+          />
+        )}
       </div>
 
       {pagination && (

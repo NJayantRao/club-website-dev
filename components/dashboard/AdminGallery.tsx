@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
+import axios from "axios";
 
 const LIMIT = 9;
 
@@ -25,12 +26,12 @@ const AdminGallery: React.FC = () => {
 
   const fetchGallery = async (pageNum = page) => {
     setIsLoading(true);
+
     try {
-      const res = await fetch(
+      const { data } = await axios.get(
         `/api/achievements/gallery?page=${pageNum}&limit=${LIMIT}`
       );
-      if (!res.ok) return;
-      const data = await res.json();
+
       setGallery(data.data ?? []);
       setPagination(data.pagination ?? null);
     } catch (err) {
@@ -62,11 +63,11 @@ const AdminGallery: React.FC = () => {
       fd.append("groupName", groupName);
       photoFiles.forEach((f) => fd.append("photos", f));
 
-      const res = await fetch("/api/achievements/gallery", {
-        method: "POST",
-        body: fd,
+      await axios.post("/api/achievements/gallery", fd, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
-      if (!res.ok) throw new Error("Save failed");
       setShowModal(false);
       setPhotoFiles([]);
       setGroupName("");
@@ -101,10 +102,7 @@ const AdminGallery: React.FC = () => {
       isConfirm: true,
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/achievements/gallery/${id}`, {
-            method: "DELETE",
-          });
-          if (!res.ok) throw new Error("Delete failed");
+          await axios.delete(`/api/achievements/gallery/${id}`);
           setPopup((p) => ({ ...p, show: false }));
           fetchGallery(page);
         } catch (err) {

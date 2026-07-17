@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useEffect, useState } from "react";
 
 interface FetchParams {
@@ -13,13 +14,9 @@ const fetchRecruitment = async (params: FetchParams = {}) => {
   if (params.limit) query.set("limit", String(params.limit));
   if (params.type) query.set("type", params.type);
 
-  const res = await fetch(`/api/recruitment?${query}`);
+  const { data } = await axios.get(`/api/recruitment?${query}`);
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch recruitment");
-  }
-
-  return res.json();
+  return data;
 };
 
 export function useRecruitmentList(params: FetchParams = {}) {
@@ -75,23 +72,16 @@ export function useSubmitRecruitment() {
       setLoading(true);
       setError(null);
 
-      const res = await fetch("/api/recruitment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const response = await axios.post("/api/recruitment", data);
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Submission failed");
-      }
+      return response.data;
+    } catch (err: any) {
+      const error =
+        err.response?.data?.message ?? err.message ?? "Submission failed";
 
-      return await res.json();
-    } catch (err) {
-      setError(err as Error);
-      throw err;
+      const newError = new Error(error);
+      setError(newError);
+      throw newError;
     } finally {
       setLoading(false);
     }
