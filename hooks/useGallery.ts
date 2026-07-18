@@ -1,5 +1,23 @@
-import { initialGallery } from "@/data/initial-gallery";
-import { useState } from "react";
+import axios from "axios";
+import { useEffect, useState } from "react";
+
+export interface GalleryImage {
+  id: string;
+  imageUrl: string;
+}
+
+export interface GalleryAlbum {
+  id: string;
+  groupName: string;
+  images: GalleryImage[];
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
 
 interface FetchParams {
   page?: number;
@@ -7,45 +25,86 @@ interface FetchParams {
 }
 
 export function useGallery(params: FetchParams = {}) {
-  const [gallery, setGallery] = useState(initialGallery);
-
   const page = params.page ?? 1;
-  const limit = params.limit ?? gallery.length;
+  const limit = params.limit ?? 9;
 
-  const start = (page - 1) * limit;
-  const end = start + limit;
+  const [gallery, setGallery] = useState<GalleryAlbum[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const paginated = gallery.slice(start, end);
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchGallery = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data } = await axios.get("/api/gallery", {
+          params: { page, limit },
+        });
+
+        if (!cancelled) {
+          setGallery(data.data ?? []);
+          setPagination(data.pagination ?? null);
+        }
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) {
+          setError("Failed to load gallery");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchGallery();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [page, limit]);
 
   return {
     data: {
-      data: paginated,
-      pagination: {
-        page,
-        limit,
-        total: gallery.length,
-        totalPages: Math.ceil(gallery.length / limit),
-        hasNextPage: end < gallery.length,
-        hasPrevPage: page > 1,
-      },
+      data: gallery,
+      pagination,
     },
-    loading: false,
-    error: null,
+    loading,
+    error,
     setGallery,
   };
 }
 
 export function useDeleteGallery(
-  setGallery: React.Dispatch<React.SetStateAction<typeof initialGallery>>
+  setGallery: React.Dispatch<React.SetStateAction<GalleryAlbum[]>>
 ) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const deleteGallery = async (id: string) => {
-    setGallery((prev) => prev.filter((item) => item.id !== id));
-    return { success: true };
+    setLoading(true);
+    setError(null);
+
+    try {
+      await axios.delete(`/api/gallery/${id}`);
+      setGallery((prev) => prev.filter((item) => item.id !== id));
+      return { success: true };
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete album");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
     deleteGallery,
-    loading: false,
-    error: null,
+    loading,
+    error,
   };
 }

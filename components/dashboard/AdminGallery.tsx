@@ -1,16 +1,34 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Plus, Trash2, X, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Image as ImageIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
 import axios from "axios";
 
 const LIMIT = 9;
 
+interface GalleryImage {
+  id: string;
+  imageUrl: string;
+}
+
+interface GalleryAlbum {
+  id: string;
+  groupName: string;
+  images: GalleryImage[];
+}
+
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 const AdminGallery: React.FC = () => {
   const [page, setPage] = useState(1);
-  const [gallery, setGallery] = useState<any[]>([]);
-  const [pagination, setPagination] = useState<any>(null);
+  const [gallery, setGallery] = useState<GalleryAlbum[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -24,12 +42,16 @@ const AdminGallery: React.FC = () => {
   });
   const [groupName, setGroupName] = useState("");
 
+  // Non-null while editing an existing album; null while creating a new one.
+  const [editingAlbum, setEditingAlbum] = useState<GalleryAlbum | null>(null);
+  const [removingImageId, setRemovingImageId] = useState<string | null>(null);
+
   const fetchGallery = async (pageNum = page) => {
     setIsLoading(true);
 
     try {
       const { data } = await axios.get(
-        `/api/achievements/gallery?page=${pageNum}&limit=${LIMIT}`
+        `/api/gallery?page=${pageNum}&limit=${LIMIT}`
       );
 
       setGallery(data.data ?? []);
@@ -47,6 +69,20 @@ const AdminGallery: React.FC = () => {
     ); /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [page]);
 
+  const openAdd = () => {
+    setEditingAlbum(null);
+    setGroupName("");
+    setPhotoFiles([]);
+    setShowModal(true);
+  };
+
+  const openEdit = (album: GalleryAlbum) => {
+    setEditingAlbum(album);
+    setGroupName(album.groupName);
+    setPhotoFiles([]);
+    setShowModal(true);
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!groupName)
@@ -63,23 +99,38 @@ const AdminGallery: React.FC = () => {
       fd.append("groupName", groupName);
       photoFiles.forEach((f) => fd.append("photos", f));
 
-      await axios.post("/api/achievements/gallery", fd, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      if (editingAlbum) {
+        await axios.patch(`/api/gallery/${editingAlbum.id}`, fd, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      } else {
+        await axios.post("/api/gallery", fd, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
+
       setShowModal(false);
       setPhotoFiles([]);
       setGroupName("");
+      setEditingAlbum(null);
       setPopup({
         show: true,
         type: "success",
-        message: "Gallery album added!",
+        message: editingAlbum ? "Album updated!" : "Gallery album added!",
         isConfirm: false,
         onConfirm: () => {},
       });
-      setPage(1);
-      fetchGallery(1);
+
+      if (editingAlbum) {
+        fetchGallery(page);
+      } else {
+        setPage(1);
+        fetchGallery(1);
+      }
     } catch (err) {
       console.error(err);
       setPopup({
@@ -94,6 +145,45 @@ const AdminGallery: React.FC = () => {
     }
   };
 
+  const removeImage = async (albumId: string, imageId: string) => {
+    setRemovingImageId(imageId);
+
+    try {
+      await axios.delete(`/api/gallery/${albumId}/media/${imageId}`);
+
+      setEditingAlbum((prev) =>
+        prev
+          ? { ...prev, images: prev.images.filter((img) => img.id !== imageId) }
+          : prev
+      );
+
+      fetchGallery(page);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to remove photo.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    } finally {
+      setRemovingImageId(null);
+    }
+  };
+
+  const confirmRemoveImage = (albumId: string, imageId: string) =>
+    setPopup({
+      show: true,
+      type: "success",
+      message: "Remove this photo from the album?",
+      isConfirm: true,
+      onConfirm: () => {
+        setPopup((p) => ({ ...p, show: false }));
+        removeImage(albumId, imageId);
+      },
+    });
+
   const confirmDelete = (id: string, name: string) =>
     setPopup({
       show: true,
@@ -102,7 +192,7 @@ const AdminGallery: React.FC = () => {
       isConfirm: true,
       onConfirm: async () => {
         try {
-          await axios.delete(`/api/achievements/gallery/${id}`);
+          await axios.delete(`/api/gallery/${id}`);
           setPopup((p) => ({ ...p, show: false }));
           fetchGallery(page);
         } catch (err) {
@@ -135,11 +225,7 @@ const AdminGallery: React.FC = () => {
           </span>
         </h2>
         <button
-          onClick={() => {
-            setGroupName("");
-            setPhotoFiles([]);
-            setShowModal(true);
-          }}
+          onClick={openAdd}
           className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-xl font-semibold text-sm hover:bg-neutral-200 transition-all"
         >
           <Plus className="w-4 h-4" /> Add Album
@@ -147,13 +233,13 @@ const AdminGallery: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {gallery.map((g: any) => (
+        {gallery.map((g) => (
           <div
             key={g.id}
             className="group bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden hover:border-white/20 transition-all"
           >
             <div className="grid grid-cols-2 gap-0.5 h-36 overflow-hidden">
-              {g.images?.slice(0, 4).map((img: any, i: number) => (
+              {g.images?.slice(0, 4).map((img, i) => (
                 <div
                   key={img.id}
                   className="relative overflow-hidden bg-white/5"
@@ -185,12 +271,20 @@ const AdminGallery: React.FC = () => {
                   {g.images?.length ?? 0} photos
                 </p>
               </div>
-              <button
-                onClick={() => confirmDelete(g.id, g.groupName)}
-                className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                <button
+                  onClick={() => openEdit(g)}
+                  className="p-2 text-neutral-300 hover:bg-white/10 rounded-lg"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => confirmDelete(g.id, g.groupName)}
+                  className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -213,10 +307,10 @@ const AdminGallery: React.FC = () => {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-md p-6">
+          <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-bold text-white">
-                Add Gallery Album
+                {editingAlbum ? "Edit Gallery Album" : "Add Gallery Album"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -237,9 +331,46 @@ const AdminGallery: React.FC = () => {
                   className={`w-full bg-white/5 border rounded-xl px-4 py-3 text-white text-sm focus:outline-none transition-all border-white/10 focus:border-white/20`}
                 />
               </div>
+
+              {editingAlbum && editingAlbum.images.length > 0 && (
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-2">
+                    Current Photos
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {editingAlbum.images.map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative aspect-square rounded-lg overflow-hidden group/photo"
+                      >
+                        <img
+                          src={img.imageUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            confirmRemoveImage(editingAlbum.id, img.id)
+                          }
+                          disabled={removingImageId === img.id}
+                          className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover/photo:opacity-100 transition-all disabled:opacity-100"
+                        >
+                          {removingImageId === img.id ? (
+                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <X className="w-4 h-4 text-white" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black block mb-1">
-                  Photos
+                  {editingAlbum ? "Add More Photos" : "Photos"}
                 </label>
                 <input
                   type="file"
@@ -269,7 +400,11 @@ const AdminGallery: React.FC = () => {
                   disabled={saving}
                   className="flex-1 py-3 bg-white text-black rounded-xl font-semibold text-sm disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Add Album"}
+                  {saving
+                    ? "Saving..."
+                    : editingAlbum
+                      ? "Save Changes"
+                      : "Add Album"}
                 </button>
               </div>
             </form>
