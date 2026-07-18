@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { EventStatusType, EventType } from "@prisma/client";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -106,6 +106,37 @@ export async function POST(request: NextRequest) {
   }
 }
 
+const getCachedEvents = unstable_cache(
+  async (
+    where: Record<string, unknown>,
+    skip: number,
+    limit: number,
+    sortBy: string,
+    sortOrder: string
+  ) => {
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          [sortBy]: sortOrder as "asc" | "desc",
+        },
+        include: {
+          _count: {
+            select: { responses: true },
+          },
+        },
+      }),
+      prisma.event.count({ where }),
+    ]);
+
+    return { events, total };
+  },
+  ["events-admin-list"],
+  { tags: ["events"], revalidate: 86400 }
+);
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -123,22 +154,13 @@ export async function GET(request: NextRequest) {
       ...(status ? { status: status as EventStatusType } : {}),
     };
 
-    const [events, total] = await Promise.all([
-      prisma.event.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: {
-          [sortBy]: sortOrder as "asc" | "desc",
-        },
-        include: {
-          _count: {
-            select: { responses: true },
-          },
-        },
-      }),
-      prisma.event.count({ where }),
-    ]);
+    const { events, total } = await getCachedEvents(
+      where,
+      skip,
+      limit,
+      sortBy,
+      sortOrder
+    );
 
     return Response.json(
       {

@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { AchievementType } from "@prisma/client";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 
 export async function POST(request: NextRequest) {
   try {
@@ -113,16 +113,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-
-    const page = parseInt(searchParams.get("page")!) || 1;
-    const limit = parseInt(searchParams.get("limit")!) || 5;
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
-    const skip = (page - 1) * limit;
-
+const getCachedAchievements = unstable_cache(
+  async (skip: number, limit: number, sortBy: string, sortOrder: string) => {
     const [achievements, total] = await Promise.all([
       prisma.achievement.findMany({
         skip,
@@ -140,6 +132,43 @@ export async function GET(request: NextRequest) {
       prisma.achievement.count(),
     ]);
 
+    // unstable_cache serializes its return value to JSON. A cache miss
+    // hands back a real Date from Prisma, but a later cache hit hands back
+    // the deserialized (plain string) version — so do the Date -> string
+    // conversion here, inside the cached function, to keep the shape
+    // identical on every call instead of only correct on the first one.
+    const data = achievements.map((achievement) => ({
+      id: achievement.id,
+      title: achievement.title,
+      description: achievement.description ?? "",
+      achievedAt: achievement.achievedAt.toISOString(),
+      tag: achievement.tag,
+      imageUrl: achievement.imageUrl,
+    }));
+
+    return { data, total };
+  },
+  ["achievements-admin-list"],
+  { tags: ["achievements"], revalidate: 86400 }
+);
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+
+    const page = parseInt(searchParams.get("page")!) || 1;
+    const limit = parseInt(searchParams.get("limit")!) || 5;
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
+    const skip = (page - 1) * limit;
+
+    const { data, total } = await getCachedAchievements(
+      skip,
+      limit,
+      sortBy,
+      sortOrder
+    );
+
     return Response.json(
       {
         success: true,
@@ -147,14 +176,7 @@ export async function GET(request: NextRequest) {
         // Field names match the Prisma schema (and the POST/PATCH routes),
         // so the frontend can use the same `Achievement` type everywhere
         // instead of a one-off remapped shape.
-        data: achievements.map((achievement) => ({
-          id: achievement.id,
-          title: achievement.title,
-          description: achievement.description ?? "",
-          achievedAt: achievement.achievedAt.toISOString(),
-          tag: achievement.tag,
-          imageUrl: achievement.imageUrl,
-        })),
+        data,
         pagination: {
           page,
           limit,

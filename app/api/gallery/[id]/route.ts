@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { MediaUsageType } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -76,6 +77,8 @@ export async function PATCH(
         )
       );
     }
+
+    revalidateTag("gallery", "max");
 
     return Response.json(
       {
@@ -152,6 +155,8 @@ export async function DELETE(
         where: { id },
       }),
     ]);
+
+    revalidateTag("gallery", "max");
 
     return Response.json(
       {

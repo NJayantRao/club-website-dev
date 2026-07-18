@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag } from "next/cache";
 
 export async function GET(
   _request: NextRequest,
@@ -108,6 +109,8 @@ export async function PATCH(
       },
     });
 
+    revalidateTag("contact-us", "max");
+
     return Response.json(
       {
         success: true,
@@ -173,6 +176,8 @@ export async function DELETE(
     await prisma.contactInquiry.delete({
       where: { id },
     });
+
+    revalidateTag("contact-us", "max");
 
     return Response.json(
       {

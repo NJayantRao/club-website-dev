@@ -1,6 +1,31 @@
 import prisma from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { NextRequest } from "next/server";
+import { unstable_cache } from "next/cache";
+
+const getCachedTeam = unstable_cache(
+  async (
+    where: Record<string, unknown>,
+    skip: number,
+    limit: number,
+    sortBy: string,
+    sortOrder: string
+  ) => {
+    const [members, total] = await Promise.all([
+      prisma.member.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      prisma.member.count({ where }),
+    ]);
+
+    return { members, total };
+  },
+  ["our-team-list"],
+  { tags: ["members"], revalidate: 86400 }
+);
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -15,15 +40,13 @@ export async function GET(request: NextRequest) {
 
   const skip = (page - 1) * limit;
   try {
-    const [members, total] = await Promise.all([
-      prisma.member.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder },
-      }),
-      prisma.member.count({ where }),
-    ]);
+    const { members, total } = await getCachedTeam(
+      where,
+      skip,
+      limit,
+      sortBy,
+      sortOrder
+    );
 
     return Response.json(
       {

@@ -46,5 +46,5 @@ export const getMembers = unstable_cache(
     }));
   },
   ["members-list"],
-  { tags: ["members"] }
+  { tags: ["members"], revalidate: 86400 }
 );

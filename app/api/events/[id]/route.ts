@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { EventType } from "@prisma/client";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
+import { revalidateTag } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -76,6 +77,8 @@ export async function PATCH(
       },
     });
 
+    revalidateTag("events", "max");
+
     return Response.json(
       {
         success: true,
@@ -129,6 +132,8 @@ export async function DELETE(
         id,
       },
     });
+
+    revalidateTag("events", "max");
 
     return Response.json(
       {

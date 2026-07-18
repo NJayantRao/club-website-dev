@@ -53,7 +53,6 @@ export default function FieldModal({
     initialValues?.placeholder ?? ""
   );
 
-  // Reset the form whenever the modal is opened for a (possibly different) field.
   useEffect(() => {
     if (open) {
       const values = initialValues ?? EMPTY_VALUES;
@@ -63,7 +62,6 @@ export default function FieldModal({
       setRequired(values.required);
       setPlaceholder(values.placeholder);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialValues]);
 
   if (!open) return null;

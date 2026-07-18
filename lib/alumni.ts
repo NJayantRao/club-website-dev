@@ -34,5 +34,5 @@ export const getAlumni = unstable_cache(
     }));
   },
   ["alumni-list"],
-  { tags: ["members"] }
+  { tags: ["members"], revalidate: 86400 }
 );

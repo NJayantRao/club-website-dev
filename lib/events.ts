@@ -40,5 +40,5 @@ export const getEvents = unstable_cache(
     return events;
   },
   ["event-list"],
-  { tags: ["events"] }
+  { tags: ["events"], revalidate: 86400 }
 );

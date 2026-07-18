@@ -42,7 +42,6 @@ const AdminGallery: React.FC = () => {
   });
   const [groupName, setGroupName] = useState("");
 
-  // Non-null while editing an existing album; null while creating a new one.
   const [editingAlbum, setEditingAlbum] = useState<GalleryAlbum | null>(null);
   const [removingImageId, setRemovingImageId] = useState<string | null>(null);
 

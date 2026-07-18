@@ -1,6 +1,24 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag, unstable_cache } from "next/cache";
+
+const getCachedRecruits = unstable_cache(
+  async (skip: number, limit: number, sortBy: string, sortOrder: string) => {
+    const [recruits, total] = await Promise.all([
+      prisma.recruitment.findMany({
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder as "asc" | "desc" },
+      }),
+      prisma.recruitment.count(),
+    ]);
+
+    return { recruits, total };
+  },
+  ["recruitment-list"],
+  { tags: ["recruitment"], revalidate: 86400 }
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,6 +70,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    revalidateTag("recruitment", "max");
+
     return Response.json(
       {
         success: true,
@@ -89,14 +109,12 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const skip = (page - 1) * limit;
 
-    const [recruits, total] = await Promise.all([
-      prisma.recruitment.findMany({
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder as "asc" | "desc" },
-      }),
-      prisma.recruitment.count(),
-    ]);
+    const { recruits, total } = await getCachedRecruits(
+      skip,
+      limit,
+      sortBy,
+      sortOrder
+    );
 
     return Response.json(
       {
@@ -134,6 +152,8 @@ export async function DELETE() {
     }
 
     await prisma.recruitment.deleteMany({});
+
+    revalidateTag("recruitment", "max");
 
     return Response.json(
       {

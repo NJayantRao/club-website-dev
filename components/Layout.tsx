@@ -11,28 +11,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Scroll to top on route change
     window.scrollTo(0, 0);
 
-    // Check for reduced motion preference
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
 
-    // Initialize AOS
     AOS.init({
       duration: 800,
       once: true,
-      disable: prefersReducedMotion || window.innerWidth < 768, // Disable AOS on small/slow devices
+      disable: prefersReducedMotion || window.innerWidth < 768,
     });
-    // Refresh AOS to catch new elements
     AOS.refresh();
 
     if (prefersReducedMotion) return;
 
-    // Re-calculate hover triggers and tilt cards after a short delay to allow DOM to render
     const initInteractivity = () => {
-      // Custom Cursor Logic
       const cursor = cursorRef.current;
       const triggers = document.querySelectorAll(
         '.hover-trigger, a, button, [role="button"]'
@@ -46,7 +40,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         trigger.addEventListener("mouseleave", handleMouseLeave);
       });
 
-      // 3D Tilt Card Logic
       const cards = document.querySelectorAll(
         ".tilt-card"
       ) as NodeListOf<HTMLElement>;
@@ -82,7 +75,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [pathname]);
 
   useEffect(() => {
-    // Global Cursor Follower
     const cursor = cursorRef.current;
     let mouseX = 0;
     let mouseY = 0;

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag } from "next/cache";
 
 export async function PATCH(
   request: NextRequest,
@@ -97,6 +98,8 @@ export async function DELETE(
     await prisma.eventResponse.delete({
       where: { id: responseId },
     });
+
+    revalidateTag("events", "max");
 
     return Response.json(
       {

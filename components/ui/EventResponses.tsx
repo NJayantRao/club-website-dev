@@ -99,7 +99,6 @@ const EventResponses = ({ id }: EventResponsesProps) => {
 
   useEffect(() => {
     load(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, page]);
 
   const toggleAttendance = async (response: EventResponseItem) => {

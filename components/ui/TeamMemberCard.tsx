@@ -45,7 +45,6 @@ export default function TeamMemberCard({
   const [src, setSrc] = useState<string>(() => resolveSrc(img, name));
   const clickable = Boolean(linkedin);
 
-  // keep src in sync if img/name ever change after mount
   useEffect(() => {
     setSrc(resolveSrc(img, name));
   }, [img, name]);

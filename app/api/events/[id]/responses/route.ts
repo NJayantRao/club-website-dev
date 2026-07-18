@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag } from "next/cache";
 
 export async function GET(
   request: NextRequest,
@@ -114,7 +115,6 @@ export async function POST(
       );
     }
 
-    // Check registration period
     const now = new Date();
 
     if (event.registrationStart && now < event.registrationStart) {
@@ -137,7 +137,6 @@ export async function POST(
       );
     }
 
-    // Validate required dynamic fields
     for (const field of event.formFields) {
       if (
         field.required &&
@@ -165,6 +164,8 @@ export async function POST(
         answers: answers ?? {},
       },
     });
+
+    revalidateTag("events", "max");
 
     return Response.json(
       {

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag } from "next/cache";
 
 export async function PUT(
   request: NextRequest,
@@ -33,6 +34,8 @@ export async function PUT(
         isSelected: Boolean(isSelected),
       },
     });
+
+    revalidateTag("recruitment", "max");
 
     return Response.json(
       {
@@ -81,6 +84,8 @@ export async function DELETE(
     await prisma.recruitment.delete({
       where: { id },
     });
+
+    revalidateTag("recruitment", "max");
 
     return Response.json(
       {

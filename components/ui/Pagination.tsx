@@ -21,7 +21,6 @@ export function Pagination({
   const start = (page - 1) * limit + 1;
   const end = Math.min(page * limit, total);
 
-  // Generate page numbers to show
   const pages: (number | "...")[] = [];
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) pages.push(i);

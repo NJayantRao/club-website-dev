@@ -40,8 +40,6 @@ const EventAnalytics = ({ id }: EventAnalyticsProps) => {
         const event = eventData.event;
         const total = responseData.pagination?.total ?? 0;
 
-        // Attendance count isn't paginated separately, so fetch all responses
-        // in one page just for this small aggregate.
         const { data: allResponses } = await axios.get(
           `/api/events/${id}/responses`,
           { params: { page: 1, limit: Math.max(total, 1) } }

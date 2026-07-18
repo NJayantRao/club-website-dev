@@ -41,9 +41,6 @@ const navItems = [
   { id: "recruitment", label: "Recruitment", icon: User },
 ];
 
-// Tailwind's compiler only picks up class names it can find as literal
-// strings — `hover:border-${color}-500/30` never made it into the build.
-// This static map keeps every class name literal so it actually ships.
 const statTheme = {
   blue: {
     badge: "bg-blue-500/10 border-blue-500/20 text-blue-400",
@@ -217,9 +214,6 @@ const DashboardContent = () => {
     recruits: 0,
   });
 
-  // Keep the tab in sync with the URL in both directions: switching tabs
-  // updates the query string, and browser back/forward (or a shared link)
-  // updates the active tab.
   const setActiveTab = (id: string) => {
     setActiveTabState(id);
     const params = new URLSearchParams(searchParams.toString());
@@ -239,7 +233,6 @@ const DashboardContent = () => {
     const isValidTab = navItems.some((item) => item.id === requestedTab);
     const next = isValidTab ? (requestedTab as string) : "dashboard";
     setActiveTabState((current) => (current === next ? current : next));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   useEffect(() => {

@@ -28,5 +28,5 @@ export const getAdvisors = unstable_cache(
     return advisors;
   },
   ["advisors-list"],
-  { tags: ["members"] }
+  { tags: ["members"], revalidate: 86400 }
 );

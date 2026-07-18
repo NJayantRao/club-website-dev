@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { MediaUsageType } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function DELETE(
   _request: NextRequest,
@@ -26,8 +27,6 @@ export async function DELETE(
       );
     }
 
-    // Confirm this media actually belongs to this album before deleting,
-    // so one album's edit view can't be used to delete another's photo.
     const usage = await prisma.mediaUsage.findFirst({
       where: {
         mediaId,
@@ -46,10 +45,11 @@ export async function DELETE(
       );
     }
 
-    // Deleting the Media row cascades to delete its MediaUsage row too.
     await prisma.media.delete({
       where: { id: mediaId },
     });
+
+    revalidateTag("gallery", "max");
 
     return Response.json(
       {

@@ -3,15 +3,10 @@ import prisma from "@/lib/prisma";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { MediaUsageType } from "@prisma/client";
+import { revalidateTag, unstable_cache } from "next/cache";
 
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-
-    const page = parseInt(searchParams.get("page")!) || 1;
-    const limit = parseInt(searchParams.get("limit")!) || 9;
-    const skip = (page - 1) * limit;
-
+const getCachedGallery = unstable_cache(
+  async (skip: number, limit: number) => {
     const [albums, total] = await Promise.all([
       prisma.galleryAlbum.findMany({
         skip,
@@ -44,6 +39,22 @@ export async function GET(request: NextRequest) {
           imageUrl: usage.media.url,
         })),
     }));
+
+    return { data, total };
+  },
+  ["gallery-list"],
+  { tags: ["gallery"], revalidate: 86400 }
+);
+
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+
+    const page = parseInt(searchParams.get("page")!) || 1;
+    const limit = parseInt(searchParams.get("limit")!) || 9;
+    const skip = (page - 1) * limit;
+
+    const { data, total } = await getCachedGallery(skip, limit);
 
     return Response.json(
       {
@@ -133,6 +144,8 @@ export async function POST(request: NextRequest) {
         })
       )
     );
+
+    revalidateTag("gallery", "max");
 
     return Response.json(
       {

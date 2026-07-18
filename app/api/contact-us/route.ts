@@ -1,6 +1,26 @@
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { requireAdminAuth } from "@/lib/authorize-admin";
+import { revalidateTag, unstable_cache } from "next/cache";
+
+const getCachedInquiries = unstable_cache(
+  async (skip: number, limit: number, sortBy: string, sortOrder: string) => {
+    const [inquiries, total] = await Promise.all([
+      prisma.contactInquiry.findMany({
+        skip,
+        take: limit,
+        orderBy: {
+          [sortBy]: sortOrder as "asc" | "desc",
+        },
+      }),
+      prisma.contactInquiry.count(),
+    ]);
+
+    return { inquiries, total };
+  },
+  ["contact-us-list"],
+  { tags: ["contact-us"], revalidate: 86400 }
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +46,8 @@ export async function POST(request: NextRequest) {
         message,
       },
     });
+
+    revalidateTag("contact-us", "max");
 
     return Response.json(
       {
@@ -68,16 +90,12 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const skip = (page - 1) * limit;
 
-    const [inquiries, total] = await Promise.all([
-      prisma.contactInquiry.findMany({
-        skip,
-        take: limit,
-        orderBy: {
-          [sortBy]: sortOrder as "asc" | "desc",
-        },
-      }),
-      prisma.contactInquiry.count(),
-    ]);
+    const { inquiries, total } = await getCachedInquiries(
+      skip,
+      limit,
+      sortBy,
+      sortOrder
+    );
 
     return Response.json(
       {
