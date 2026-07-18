@@ -90,6 +90,11 @@ model Achievement {
   tag         AchievementType
   members     Member[]        @relation("AchievementMembers")
 }
+model GalleryAlbum {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+}
 
 model Media {
   id        String       @id @default(uuid())
