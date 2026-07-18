@@ -12,6 +12,9 @@ export interface EventItem {
   startAt: Date;
   venue?: string | null;
   capacity?: number | null;
+  _count?: {
+    responses: number;
+  };
 }
 
 export const getEvents = unstable_cache(
@@ -28,6 +31,9 @@ export const getEvents = unstable_cache(
         startAt: true,
         venue: true,
         capacity: true,
+        _count: {
+          select: { responses: true },
+        },
       },
     });
 
