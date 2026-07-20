@@ -10,6 +10,7 @@ export type MemberFormData = {
   phone: string;
   role: Role;
   year: string;
+  designation: string;
   skills: string;
 };
 
@@ -158,44 +159,88 @@ const MemberModal = ({
             />
           </div>
 
-          {/* Role + Year */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Role */}
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
+              Role
+            </label>
+
+            <select
+              value={form.role}
+              onChange={(e) => updateField("role", e.target.value as Role)}
+              className="w-full mt-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20"
+            >
+              {Object.values(Role).map((role) => (
+                <option key={role} value={role} className="bg-[#0A0A0A]">
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Year + Designation — the public site shows `designation` for
+              every role (Member/Advisor/Alumni all display it), while
+              `year` only makes sense for students: current members track
+              their academic year, alumni track their graduation year, and
+              advisors have neither. */}
+          {form.role === Role.ADVISOR ? (
             <div>
               <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
-                Role
-              </label>
-
-              <select
-                value={form.role}
-                onChange={(e) => updateField("role", e.target.value as Role)}
-                className="w-full mt-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20"
-              >
-                {Object.values(Role).map((role) => (
-                  <option key={role} value={role} className="bg-[#0A0A0A]">
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
-                Year
+                Designation
               </label>
 
               <input
-                value={form.year}
-                onChange={(e) => updateField("year", e.target.value)}
+                value={form.designation}
+                onChange={(e) => updateField("designation", e.target.value)}
                 className="w-full mt-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20"
-                placeholder="1st, 2nd, 3rd..."
+                placeholder="Faculty Advisor, HOD..."
               />
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
+                  {form.role === Role.ALUMNI ? "Graduation Year" : "Year"}
+                </label>
+
+                <input
+                  value={form.year}
+                  onChange={(e) => updateField("year", e.target.value)}
+                  className="w-full mt-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20"
+                  placeholder={
+                    form.role === Role.ALUMNI ? "2023" : "1st, 2nd, 3rd..."
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
+                  Designation
+                </label>
+
+                <input
+                  value={form.designation}
+                  onChange={(e) => updateField("designation", e.target.value)}
+                  className="w-full mt-1 rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white text-sm focus:outline-none focus:border-white/20"
+                  placeholder={
+                    form.role === Role.ALUMNI
+                      ? "Software Engineer at Google..."
+                      : "Web Dev Lead, Secretary..."
+                  }
+                />
+              </div>
+            </div>
+          )}
 
           {/* Skills */}
           <div>
             <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
               Skills
+              {form.role === Role.ADVISOR && (
+                <span className="ml-1 normal-case tracking-normal text-neutral-600">
+                  (optional)
+                </span>
+              )}
             </label>
 
             <textarea

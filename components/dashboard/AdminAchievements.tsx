@@ -278,9 +278,11 @@ const AdminAchievements: React.FC = () => {
           onChange={(e) => setTagFilter(e.target.value)}
           className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm capitalize text-white outline-none focus:border-white/20"
         >
-          <option value="all">All types</option>
+          <option value="all" className="bg-[#0A0A0A]">
+            All types
+          </option>
           {TYPES.map((t) => (
-            <option key={t} value={t.toUpperCase()}>
+            <option key={t} value={t.toUpperCase()} className="bg-[#0A0A0A]">
               {tagLabel(t)}
             </option>
           ))}
@@ -429,7 +431,7 @@ const AdminAchievements: React.FC = () => {
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm capitalize text-white"
                   >
                     {TYPES.map((t) => (
-                      <option key={t} value={t}>
+                      <option key={t} value={t} className="bg-[#0A0A0A]">
                         {tagLabel(t)}
                       </option>
                     ))}

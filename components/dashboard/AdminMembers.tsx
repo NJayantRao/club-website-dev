@@ -78,6 +78,7 @@ type MemberFormData = {
   phone: string;
   role: Role;
   year: string;
+  designation: string;
   skills: string;
 };
 
@@ -102,7 +103,9 @@ const validateMember = (form: MemberFormData) => {
     errors.email = "Email is required";
   }
 
-  if (!form.skills.trim()) {
+  // Advisors are described by their designation, not a skills list, so
+  // only students (current members / alumni) need at least one skill.
+  if (form.role !== Role.ADVISOR && !form.skills.trim()) {
     errors.skills = "At least one skill is required";
   }
 
@@ -117,6 +120,7 @@ const EMPTY_FORM: MemberFormData = {
   phone: "",
   role: Role.MEMBER,
   year: "",
+  designation: "",
   skills: "",
 };
 
@@ -166,11 +170,21 @@ const MemberCard = ({ member, onEdit, onDelete }: MemberCardProps) => (
           {member.role}
         </p>
 
-        {member.year && (
-          <span className="mt-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs text-neutral-300">
-            {member.year}
-          </span>
-        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {member.designation && (
+            <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs text-neutral-300">
+              {member.designation}
+            </span>
+          )}
+
+          {member.role !== Role.ADVISOR && member.year && (
+            <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-xs text-neutral-300">
+              {member.role === Role.ALUMNI
+                ? `Class of ${member.year}`
+                : member.year}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   </div>
@@ -274,7 +288,7 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
   };
 
   const openAdd = () => {
-    setForm(EMPTY_FORM);
+    setForm({ ...EMPTY_FORM, role: Role[role] });
     setErrors({});
     setMemberId(null);
     setImageFile(null);
@@ -292,6 +306,7 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       phone: member.phone ?? "",
       role: member.role ?? Role.MEMBER,
       year: member.year ?? "",
+      designation: member.designation ?? "",
       skills: (member.skills ?? []).join(", "),
     });
 
@@ -320,6 +335,7 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       fd.append("phone", form.phone);
       fd.append("role", form.role);
       fd.append("year", form.year);
+      fd.append("designation", form.designation);
 
       fd.append(
         "skills",

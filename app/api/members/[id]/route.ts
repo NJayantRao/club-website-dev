@@ -93,6 +93,7 @@ export async function PATCH(
     const phone = (formData.get("phone") as string) ?? undefined;
     const role = (formData.get("role") as Role) ?? undefined;
     const year = (formData.get("year") as string) ?? undefined;
+    const designation = (formData.get("designation") as string) ?? undefined;
 
     const skillsValue = formData.get("skills");
     const skills = skillsValue
@@ -117,6 +118,7 @@ export async function PATCH(
         phone,
         role,
         year,
+        designation,
         skills,
         imageUrl,
       },

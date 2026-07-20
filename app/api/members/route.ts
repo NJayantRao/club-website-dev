@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     const phone = (formData.get("phone") as string | null) ?? null;
     const role = (formData.get("role") as Role) || undefined;
     const year = (formData.get("year") as string | null) ?? null;
+    const designation = (formData.get("designation") as string | null) ?? null;
     const image = formData.get("image") as File | null;
     const skills = JSON.parse(
       (formData.get("skills") as string) || "[]"
@@ -36,8 +37,7 @@ export async function POST(request: NextRequest) {
         }
       );
     }
-
-    if (skills.length === 0) {
+    if (role !== Role.ADVISOR && skills.length === 0) {
       return Response.json(
         {
           success: false,
@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
         imageUrl,
         role,
         year,
+        designation,
         skills,
       },
     });
