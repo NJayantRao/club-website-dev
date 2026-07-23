@@ -1,7 +1,8 @@
 import prisma from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { MediaUsageType, Role } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { unstable_cache } from "next/cache";
+import { getMediaUrlMap } from "@/lib/media";
 
 const getCachedTeam = unstable_cache(
   async (
@@ -21,7 +22,17 @@ const getCachedTeam = unstable_cache(
       prisma.member.count({ where }),
     ]);
 
-    return { members, total };
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.PROFILE,
+      members.map((member) => member.id)
+    );
+
+    const membersWithImages = members.map((member) => ({
+      ...member,
+      imageUrl: imageMap.get(member.id) ?? null,
+    }));
+
+    return { members: membersWithImages, total };
   },
   ["our-team-list"],
   { tags: ["members"], revalidate: 86400 }

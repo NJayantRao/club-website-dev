@@ -2,8 +2,9 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
-import { Role } from "@prisma/client";
+import { MediaUsageType, Role } from "@prisma/client";
 import { revalidateTag } from "next/cache";
+import { getMediaUrl, removeMedia, replaceMedia } from "@/lib/media";
 
 export async function DELETE(
   _request: NextRequest,
@@ -30,10 +31,16 @@ export async function DELETE(
       );
     }
 
-    const member = await prisma.member.delete({
-      where: {
-        id,
-      },
+    const member = await prisma.$transaction(async (tx) => {
+      const deleted = await tx.member.delete({
+        where: {
+          id,
+        },
+      });
+
+      await removeMedia(MediaUsageType.PROFILE, id, tx);
+
+      return deleted;
     });
 
     revalidateTag("members", "max");
@@ -102,27 +109,37 @@ export async function PATCH(
 
     const image = formData.get("image") as File | null;
 
-    let imageUrl: string | undefined;
+    let newImageUrl: string | undefined;
 
     if (image && image.size > 0) {
-      imageUrl = await uploadImageToCloudinary(image, "club-members");
+      newImageUrl = await uploadImageToCloudinary(image, "club-members");
     }
 
-    const member = await prisma.member.update({
-      where: {
-        id,
-      },
-      data: {
-        name,
-        email,
-        phone,
-        role,
-        year,
-        designation,
-        skills,
-        imageUrl,
-      },
+    const member = await prisma.$transaction(async (tx) => {
+      const updated = await tx.member.update({
+        where: {
+          id,
+        },
+        data: {
+          name,
+          email,
+          phone,
+          role,
+          year,
+          designation,
+          skills,
+        },
+      });
+
+      if (newImageUrl) {
+        await replaceMedia(MediaUsageType.PROFILE, id, newImageUrl, tx);
+      }
+
+      return updated;
     });
+
+    const imageUrl =
+      newImageUrl ?? (await getMediaUrl(MediaUsageType.PROFILE, id));
 
     revalidateTag("members", "max");
 
@@ -130,7 +147,7 @@ export async function PATCH(
       {
         success: true,
         message: `${member.name} updated successfully.`,
-        member,
+        member: { ...member, imageUrl },
       },
       {
         status: 200,

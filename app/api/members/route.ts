@@ -2,8 +2,9 @@ import { NextRequest } from "next/server";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
-import { Role } from "@prisma/client";
+import { MediaUsageType, Role } from "@prisma/client";
 import { revalidateTag } from "next/cache";
+import { attachMedia } from "@/lib/media";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,23 +48,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Upload before the transaction: Cloudinary isn't part of the DB
+    // transaction, so there's no point holding a DB connection open while
+    // waiting on it.
     let imageUrl: string | null = null;
 
     if (image && image.size > 0) {
       imageUrl = await uploadImageToCloudinary(image, "club-members");
     }
 
-    const member = await prisma.member.create({
-      data: {
-        name,
-        email,
-        phone,
-        imageUrl,
-        role,
-        year,
-        designation,
-        skills,
-      },
+    const member = await prisma.$transaction(async (tx) => {
+      const created = await tx.member.create({
+        data: {
+          name,
+          email,
+          phone,
+          role,
+          year,
+          designation,
+          skills,
+        },
+      });
+
+      if (imageUrl) {
+        await attachMedia(MediaUsageType.PROFILE, created.id, imageUrl, tx);
+      }
+
+      return created;
     });
 
     revalidateTag("members", "max");
@@ -72,7 +83,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: `${member.name} registered successfully`,
-        member,
+        member: { ...member, imageUrl },
       },
       {
         status: 201,

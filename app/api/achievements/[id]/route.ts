@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { revalidateTag } from "next/cache";
+import { MediaUsageType } from "@prisma/client";
+import { removeMedia } from "@/lib/media";
 
 export async function PATCH(
   request: NextRequest,
@@ -125,8 +127,12 @@ export async function DELETE(
       );
     }
 
-    await prisma.achievement.delete({
-      where: { id },
+    await prisma.$transaction(async (tx) => {
+      await tx.achievement.delete({
+        where: { id },
+      });
+
+      await removeMedia(MediaUsageType.ACHIEVEMENT, id, tx);
     });
 
     revalidateTag("achievements", "max");

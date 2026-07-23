@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { MediaUsageType, Role } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getMediaUrlMap } from "@/lib/media";
 
 export interface MemberItem {
   id: string;
@@ -22,7 +23,6 @@ export const getMembers = unstable_cache(
         name: true,
         role: true,
         designation: true,
-        imageUrl: true,
         links: {
           where: {
             platform: "linkedin",
@@ -36,12 +36,17 @@ export const getMembers = unstable_cache(
       },
     });
 
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.PROFILE,
+      members.map((member) => member.id)
+    );
+
     return members.map((member) => ({
       id: member.id,
       name: member.name,
       role: member.role,
       designation: member.designation,
-      imageUrl: member.imageUrl,
+      imageUrl: imageMap.get(member.id) ?? null,
       link: member.links[0]?.url ?? "",
     }));
   },

@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
-import { EventStatusType, EventType } from "@prisma/client";
+import { EventStatusType, EventType, MediaUsageType } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getMediaUrlMap } from "@/lib/media";
 
 export interface EventItem {
   id: string;
@@ -26,7 +27,6 @@ export const getEvents = unstable_cache(
         title: true,
         description: true,
         status: true,
-        imageUrl: true,
         type: true,
         startAt: true,
         venue: true,
@@ -37,7 +37,15 @@ export const getEvents = unstable_cache(
       },
     });
 
-    return events;
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.EVENT,
+      events.map((event) => event.id)
+    );
+
+    return events.map((event) => ({
+      ...event,
+      imageUrl: imageMap.get(event.id) ?? null,
+    }));
   },
   ["event-list"],
   { tags: ["events"], revalidate: 86400 }

@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
+import { MediaUsageType } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getMediaUrlMap } from "@/lib/media";
 
 export interface AchievementItem {
   id: string;
@@ -21,19 +23,27 @@ export const getAchievements = unstable_cache(
         title: true,
         description: true,
         achievedAt: true,
-        imageUrl: true,
         tag: true,
       },
     });
 
-    return achievements.map((achievement) => ({
-      id: achievement.id,
-      title: achievement.title,
-      description: achievement.description ?? "",
-      achievedAt: achievement.achievedAt.toISOString(),
-      achievementTag: achievement.tag.toLowerCase(),
-      images: achievement.imageUrl ? [{ imageUrl: achievement.imageUrl }] : [],
-    }));
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.ACHIEVEMENT,
+      achievements.map((achievement) => achievement.id)
+    );
+
+    return achievements.map((achievement) => {
+      const imageUrl = imageMap.get(achievement.id);
+
+      return {
+        id: achievement.id,
+        title: achievement.title,
+        description: achievement.description ?? "",
+        achievedAt: achievement.achievedAt.toISOString(),
+        achievementTag: achievement.tag.toLowerCase(),
+        images: imageUrl ? [{ imageUrl }] : [],
+      };
+    });
   },
   ["achievements-list"],
   { tags: ["achievements"] }

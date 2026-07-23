@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient, MediaUsageType, Role } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { uploadLocalImageToCloudinary } from "@/lib/upload-local-cloudinary";
 
@@ -27,16 +27,29 @@ const members = [
 const seedMembers = async () => {
   try {
     for (const member of members) {
+      const { imageUrl: localImagePath, ...memberData } = member;
+
       const imageUrl = await uploadLocalImageToCloudinary(
-        member.imageUrl.replace("/members/", "members/"),
+        localImagePath.replace("/members/", "members/"),
         "club-members"
       );
 
-      await prisma.member.create({
-        data: {
-          ...member,
-          imageUrl,
-        },
+      await prisma.$transaction(async (tx) => {
+        const created = await tx.member.create({
+          data: memberData,
+        });
+
+        await tx.media.create({
+          data: {
+            url: imageUrl,
+            usages: {
+              create: {
+                type: MediaUsageType.PROFILE,
+                entityId: created.id,
+              },
+            },
+          },
+        });
       });
 
       console.log(`✔ Added ${member.name}`);

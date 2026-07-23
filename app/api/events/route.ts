@@ -2,8 +2,9 @@ import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
-import { EventStatusType, EventType } from "@prisma/client";
+import { EventStatusType, EventType, MediaUsageType } from "@prisma/client";
 import { revalidateTag, unstable_cache } from "next/cache";
+import { attachMedia, getMediaUrlMap } from "@/lib/media";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,23 +66,30 @@ export async function POST(request: NextRequest) {
       imageUrl = await uploadImageToCloudinary(image, "event-images");
     }
 
-    const event = await prisma.event.create({
-      data: {
-        title,
-        description,
-        type,
-        imageUrl,
-        status,
-        startAt: new Date(startAt),
-        endAt: endAt ? new Date(endAt) : null,
-        venue,
-        registrationStart: registrationStart
-          ? new Date(registrationStart)
-          : null,
-        registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
-        capacity: capacity ? Number(capacity) : null,
-        createdBy: user.id,
-      },
+    const event = await prisma.$transaction(async (tx) => {
+      const created = await tx.event.create({
+        data: {
+          title,
+          description,
+          type,
+          status,
+          startAt: new Date(startAt),
+          endAt: endAt ? new Date(endAt) : null,
+          venue,
+          registrationStart: registrationStart
+            ? new Date(registrationStart)
+            : null,
+          registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+          capacity: capacity ? Number(capacity) : null,
+          createdBy: user.id,
+        },
+      });
+
+      if (imageUrl) {
+        await attachMedia(MediaUsageType.EVENT, created.id, imageUrl, tx);
+      }
+
+      return created;
     });
 
     revalidateTag("events", "max");
@@ -131,7 +139,17 @@ const getCachedEvents = unstable_cache(
       prisma.event.count({ where }),
     ]);
 
-    return { events, total };
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.EVENT,
+      events.map((event) => event.id)
+    );
+
+    const eventsWithImages = events.map((event) => ({
+      ...event,
+      imageUrl: imageMap.get(event.id) ?? null,
+    }));
+
+    return { events: eventsWithImages, total };
   },
   ["events-admin-list"],
   { tags: ["events"], revalidate: 86400 }

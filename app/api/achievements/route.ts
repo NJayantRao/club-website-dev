@@ -1,9 +1,10 @@
 import prisma from "@/lib/prisma";
 import { NextRequest } from "next/server";
-import { AchievementType } from "@prisma/client";
+import { AchievementType, MediaUsageType } from "@prisma/client";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { revalidateTag, unstable_cache } from "next/cache";
+import { attachMedia, getMediaUrlMap } from "@/lib/media";
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,19 +72,26 @@ export async function POST(request: NextRequest) {
       imageUrl = await uploadImageToCloudinary(image, "club-achievements");
     }
 
-    const achievement = await prisma.achievement.create({
-      data: {
-        title,
-        description: description,
-        imageUrl,
-        tag,
-        achievedAt: new Date(achievedAt),
-        // members: {
-        //   connect: memberIds.map((id: string) => ({
-        //     id,
-        //   })),
-        // },
-      },
+    const achievement = await prisma.$transaction(async (tx) => {
+      const created = await tx.achievement.create({
+        data: {
+          title,
+          description: description,
+          tag,
+          achievedAt: new Date(achievedAt),
+          // members: {
+          //   connect: memberIds.map((id: string) => ({
+          //     id,
+          //   })),
+          // },
+        },
+      });
+
+      if (imageUrl) {
+        await attachMedia(MediaUsageType.ACHIEVEMENT, created.id, imageUrl, tx);
+      }
+
+      return created;
     });
 
     revalidateTag("achievements", "max");
@@ -92,7 +100,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: `${achievement.title} registered successfully`,
-        achievement,
+        achievement: { ...achievement, imageUrl },
       },
       {
         status: 201,
@@ -125,12 +133,16 @@ const getCachedAchievements = unstable_cache(
           title: true,
           description: true,
           achievedAt: true,
-          imageUrl: true,
           tag: true,
         },
       }),
       prisma.achievement.count(),
     ]);
+
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.ACHIEVEMENT,
+      achievements.map((achievement) => achievement.id)
+    );
 
     // unstable_cache serializes its return value to JSON. A cache miss
     // hands back a real Date from Prisma, but a later cache hit hands back
@@ -143,7 +155,7 @@ const getCachedAchievements = unstable_cache(
       description: achievement.description ?? "",
       achievedAt: achievement.achievedAt.toISOString(),
       tag: achievement.tag,
-      imageUrl: achievement.imageUrl,
+      imageUrl: imageMap.get(achievement.id) ?? null,
     }));
 
     return { data, total };

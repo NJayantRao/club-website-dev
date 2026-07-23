@@ -17,7 +17,6 @@ model Member {
   skills       String[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  imageUrl     String?
   links        MemberLink[]
   achievements Achievement[] @relation("AchievementMembers")
 }
@@ -36,7 +35,6 @@ model Event {
   title             String
   description       String?
   status            EventStatusType  @default(UPCOMING)
-  imageUrl          String?
   type              EventType
   startAt           DateTime
   endAt             DateTime?
@@ -86,7 +84,6 @@ model Achievement {
   description String?
   createdAt   DateTime        @default(now())
   achievedAt  DateTime
-  imageUrl    String?
   tag         AchievementType
   members     Member[]        @relation("AchievementMembers")
 }

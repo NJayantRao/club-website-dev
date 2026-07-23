@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { MediaUsageType, Role } from "@prisma/client";
 import { unstable_cache } from "next/cache";
+import { getMediaUrlMap } from "@/lib/media";
 
 export interface AlumniItem {
   id: string;
@@ -21,16 +22,20 @@ export const getAlumni = unstable_cache(
         name: true,
         role: true,
         designation: true,
-        imageUrl: true,
       },
     });
+
+    const imageMap = await getMediaUrlMap(
+      MediaUsageType.PROFILE,
+      alumni.map((member) => member.id)
+    );
 
     return alumni.map((member) => ({
       id: member.id,
       name: member.name,
       role: member.role,
       designation: member.designation,
-      imageUrl: member.imageUrl,
+      imageUrl: imageMap.get(member.id) ?? null,
     }));
   },
   ["alumni-list"],

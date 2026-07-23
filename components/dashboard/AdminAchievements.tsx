@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
-import { Achievement } from "@prisma/client";
+import { AchievementType } from "@prisma/client";
 import axios from "axios";
 
 const LIMIT = 10;
@@ -27,6 +27,19 @@ const TYPES = [
   "open_source",
   "other",
 ] as const;
+
+// Images now live in the generic Media/MediaUsage tables rather than a
+// direct column, but the API still returns a plain `imageUrl` string on
+// every achievement — so this local type (not the raw Prisma model) is
+// what the frontend should use.
+interface Achievement {
+  id: string;
+  title: string;
+  description: string | null;
+  achievedAt: string;
+  tag: AchievementType;
+  imageUrl: string | null;
+}
 
 interface PaginationInfo {
   page: number;

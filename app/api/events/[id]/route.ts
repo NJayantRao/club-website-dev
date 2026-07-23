@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
-import { EventType } from "@prisma/client";
+import { EventType, MediaUsageType } from "@prisma/client";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { revalidateTag } from "next/cache";
+import { getMediaUrl, removeMedia, replaceMedia } from "@/lib/media";
 
 export async function PATCH(
   request: NextRequest,
@@ -43,39 +44,49 @@ export async function PATCH(
 
     const image = formData.get("image") as File | null;
 
-    let imageUrl: string | undefined;
+    let newImageUrl: string | undefined;
 
     if (image && image.size > 0) {
-      imageUrl = await uploadImageToCloudinary(image, "event-images");
+      newImageUrl = await uploadImageToCloudinary(image, "event-images");
     }
 
-    const event = await prisma.event.update({
-      where: {
-        id,
-      },
-      data: {
-        ...(title !== null && { title }),
-        ...(description !== null && { description }),
-        ...(type !== null && { type }),
-        ...(startAt !== null && { startAt: new Date(startAt) }),
-        ...(endAt !== null && {
-          endAt: endAt ? new Date(endAt) : null,
-        }),
-        ...(venue !== null && { venue }),
-        ...(registrationStart !== null && {
-          registrationStart: registrationStart
-            ? new Date(registrationStart)
-            : null,
-        }),
-        ...(registrationEnd !== null && {
-          registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
-        }),
-        ...(capacity !== null && {
-          capacity: capacity ? Number(capacity) : null,
-        }),
-        ...(imageUrl && { imageUrl }),
-      },
+    const event = await prisma.$transaction(async (tx) => {
+      const updated = await tx.event.update({
+        where: {
+          id,
+        },
+        data: {
+          ...(title !== null && { title }),
+          ...(description !== null && { description }),
+          ...(type !== null && { type }),
+          ...(startAt !== null && { startAt: new Date(startAt) }),
+          ...(endAt !== null && {
+            endAt: endAt ? new Date(endAt) : null,
+          }),
+          ...(venue !== null && { venue }),
+          ...(registrationStart !== null && {
+            registrationStart: registrationStart
+              ? new Date(registrationStart)
+              : null,
+          }),
+          ...(registrationEnd !== null && {
+            registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+          }),
+          ...(capacity !== null && {
+            capacity: capacity ? Number(capacity) : null,
+          }),
+        },
+      });
+
+      if (newImageUrl) {
+        await replaceMedia(MediaUsageType.EVENT, id, newImageUrl, tx);
+      }
+
+      return updated;
     });
+
+    const imageUrl =
+      newImageUrl ?? (await getMediaUrl(MediaUsageType.EVENT, id));
 
     revalidateTag("events", "max");
 
@@ -83,7 +94,7 @@ export async function PATCH(
       {
         success: true,
         message: "Event updated successfully",
-        event,
+        event: { ...event, imageUrl },
       },
       {
         status: 200,
@@ -127,10 +138,14 @@ export async function DELETE(
       );
     }
 
-    await prisma.event.delete({
-      where: {
-        id,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.event.delete({
+        where: {
+          id,
+        },
+      });
+
+      await removeMedia(MediaUsageType.EVENT, id, tx);
     });
 
     revalidateTag("events", "max");
@@ -164,12 +179,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireAdminAuth();
-
-    if (!auth.success) {
-      return auth.response;
-    }
-
     const { id } = await params;
 
     if (!id) {
@@ -205,11 +214,13 @@ export async function GET(
       );
     }
 
+    const imageUrl = await getMediaUrl(MediaUsageType.EVENT, id);
+
     return Response.json(
       {
         success: true,
         message: "Event fetched successfully",
-        event,
+        event: { ...event, imageUrl },
       },
       {
         status: 200,
