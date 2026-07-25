@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { EventType } from "@prisma/client";
+import { useSaveEvent } from "@/hooks/useEvents";
 
 interface Event {
   id: string;
@@ -55,7 +55,7 @@ export default function EditEventModal({
   onClose,
   onUpdated,
 }: EditEventModalProps) {
-  const [loading, setLoading] = useState(false);
+  const saveEvent = useSaveEvent();
 
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>(
@@ -120,8 +120,6 @@ export default function EditEventModal({
 
   async function handleSubmit() {
     try {
-      setLoading(true);
-
       const formData = new FormData();
 
       formData.append("title", title.trim());
@@ -146,7 +144,7 @@ export default function EditEventModal({
         formData.append("image", image);
       }
 
-      await axios.patch(`/api/events/${event.id}`, formData);
+      await saveEvent.mutateAsync({ id: event.id, formData });
 
       onUpdated();
 
@@ -155,8 +153,6 @@ export default function EditEventModal({
       console.error(error);
 
       alert("Failed to update event.");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -398,7 +394,7 @@ export default function EditEventModal({
               <button
                 type="button"
                 onClick={onClose}
-                disabled={loading}
+                disabled={saveEvent.isPending}
                 className="rounded-2xl border border-white/10 px-6 py-3 transition hover:bg-white/5 disabled:opacity-50"
               >
                 Cancel
@@ -407,11 +403,13 @@ export default function EditEventModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={saveEvent.isPending}
                 className="flex items-center gap-2 rounded-2xl bg-white px-7 py-3 font-semibold text-black transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading && <Loader2 size={18} className="animate-spin" />}
-                {loading ? "Saving..." : "Save Changes"}
+                {saveEvent.isPending && (
+                  <Loader2 size={18} className="animate-spin" />
+                )}
+                {saveEvent.isPending ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

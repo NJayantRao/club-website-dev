@@ -1,28 +1,15 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Trash2, ChevronDown, Mail, Phone, Search, Inbox } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
-import axios from "axios";
+import {
+  useContactQueries,
+  useDeleteContactQuery,
+} from "@/hooks/useContactQueries";
 
 const LIMIT = 15;
-
-interface ContactQuery {
-  id: string;
-  name: string;
-  email: string;
-  phoneNo: string;
-  message: string;
-  createdAt: string;
-}
-
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
 
 function initials(name: string) {
   return name
@@ -35,11 +22,15 @@ function initials(name: string) {
 
 const AdminQueries: React.FC = () => {
   const [page, setPage] = useState(1);
-  const [queries, setQueries] = useState<ContactQuery[]>([]);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+
+  const { data, isLoading } = useContactQueries(page, LIMIT);
+  const queries = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
+
+  const deleteQuery = useDeleteContactQuery();
+
   const [popup, setPopup] = useState({
     show: false,
     type: "success" as const,
@@ -48,29 +39,6 @@ const AdminQueries: React.FC = () => {
     onConfirm: () => {},
   });
 
-  const fetchQueries = async (pageNum = page) => {
-    setIsLoading(true);
-
-    try {
-      const { data } = await axios.get(
-        `/api/contact-us?page=${pageNum}&limit=${LIMIT}`
-      );
-
-      setQueries(data.data ?? []);
-      setPagination(data.pagination ?? null);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchQueries(
-      page
-    ); /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [page]);
-
   const confirmDeleteQuery = (id: string, name: string) =>
     setPopup({
       show: true,
@@ -78,10 +46,10 @@ const AdminQueries: React.FC = () => {
       message: `Delete query from ${name}?`,
       isConfirm: true,
       onConfirm: async () => {
+        setPopup((p) => ({ ...p, show: false }));
+
         try {
-          await axios.delete(`/api/contact-us/${id}`);
-          setPopup((p) => ({ ...p, show: false }));
-          fetchQueries(page);
+          await deleteQuery.mutateAsync(id);
         } catch (err) {
           console.error(err);
           setPopup({

@@ -1,5 +1,7 @@
+"use client";
+
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface GalleryImage {
   id: string;
@@ -28,83 +30,96 @@ export function useGallery(params: FetchParams = {}) {
   const page = params.page ?? 1;
   const limit = params.limit ?? 9;
 
-  const [gallery, setGallery] = useState<GalleryAlbum[]>([]);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ["gallery", page, limit],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/gallery", {
+        params: { page, limit },
+      });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchGallery = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const { data } = await axios.get("/api/gallery", {
-          params: { page, limit },
-        });
-
-        if (!cancelled) {
-          setGallery(data.data ?? []);
-          setPagination(data.pagination ?? null);
-        }
-      } catch (err) {
-        console.error(err);
-        if (!cancelled) {
-          setError("Failed to load gallery");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchGallery();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [page, limit]);
+      return {
+        data: (data.data ?? []) as GalleryAlbum[],
+        pagination: (data.pagination ?? null) as PaginationInfo | null,
+      };
+    },
+    placeholderData: (previous) => previous,
+  });
 
   return {
     data: {
-      data: gallery,
-      pagination,
+      data: query.data?.data ?? [],
+      pagination: query.data?.pagination ?? null,
     },
-    loading,
-    error,
-    setGallery,
+    loading: query.isLoading,
+    error: query.error ? "Failed to load gallery" : null,
   };
 }
 
-export function useDeleteGallery(
-  setGallery: React.Dispatch<React.SetStateAction<GalleryAlbum[]>>
-) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface SaveAlbumPayload {
+  albumId: string | null;
+  groupName: string;
+  photos: File[];
+}
 
-  const deleteGallery = async (id: string) => {
-    setLoading(true);
-    setError(null);
+export function useSaveGalleryAlbum() {
+  const queryClient = useQueryClient();
 
-    try {
-      await axios.delete(`/api/gallery/${id}`);
-      setGallery((prev) => prev.filter((item) => item.id !== id));
-      return { success: true };
-    } catch (err) {
-      console.error(err);
-      setError("Failed to delete album");
-      return { success: false };
-    } finally {
-      setLoading(false);
-    }
-  };
+  return useMutation({
+    mutationFn: async ({ albumId, groupName, photos }: SaveAlbumPayload) => {
+      const fd = new FormData();
+      fd.append("groupName", groupName);
+      photos.forEach((f) => fd.append("photos", f));
 
-  return {
-    deleteGallery,
-    loading,
-    error,
-  };
+      const url = albumId ? `/api/gallery/${albumId}` : "/api/gallery";
+      const method = albumId ? "patch" : "post";
+
+      const { data } = await axios({
+        url,
+        method,
+        data: fd,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gallery"] });
+    },
+  });
+}
+
+export function useDeleteGalleryAlbum() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await axios.delete(`/api/gallery/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gallery"] });
+    },
+  });
+}
+
+export function useRemoveGalleryPhoto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      albumId,
+      imageId,
+    }: {
+      albumId: string;
+      imageId: string;
+    }) => {
+      const { data } = await axios.delete(
+        `/api/gallery/${albumId}/media/${imageId}`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gallery"] });
+    },
+  });
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-import { Plus, Edit2, Trash2 } from "lucide-react";
+import { Plus, Edit2 } from "lucide-react";
 import { EventStatusType, EventType } from "@prisma/client";
 
 import Popup from "../ui/Popup";
@@ -10,6 +10,7 @@ import EventModal, { EventFormData } from "../ui/EventModal";
 import { Pagination } from "@/components/ui/Pagination";
 import { PopupType } from "./AdminMembers";
 import Link from "next/link";
+import { EventItem, useAdminEvents, useSaveEvent } from "@/hooks/useEvents";
 
 interface PopupState {
   show: boolean;
@@ -19,41 +20,6 @@ interface PopupState {
   onConfirm: () => void;
 }
 const LIMIT = 12;
-
-const useAdminEvents = (url: string) => {
-  const [data, setData] = useState<any[]>([]);
-  const [pagination, setPagination] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-
-    try {
-      const { data } = await axios.get(url);
-
-      setData(data.events ?? []);
-      setPagination(data.pagination ?? null);
-    } catch (err) {
-      console.error(err);
-
-      setData([]);
-      setPagination(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [url]);
-
-  return {
-    data,
-    pagination,
-    isLoading,
-    refetch: fetchData,
-  } as const;
-};
 
 type FieldErrors = Record<string, string>;
 
@@ -91,12 +57,12 @@ const validateEvent = (form: EventFormData) => {
 const AdminEvents = () => {
   const [page, setPage] = useState(1);
 
-  const {
-    data: events,
-    pagination,
-    isLoading,
-    refetch,
-  } = useAdminEvents(`/api/events?page=${page}&limit=${LIMIT}`);
+  const { data, isLoading } = useAdminEvents({ page, limit: LIMIT });
+
+  const events = data?.events ?? [];
+  const pagination = data?.pagination ?? null;
+
+  const saveEvent = useSaveEvent();
 
   const [showModal, setShowModal] = useState(false);
 
@@ -109,8 +75,6 @@ const AdminEvents = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const [isSaving, setIsSaving] = useState(false);
 
   const [popup, setPopup] = useState<PopupState>({
     show: false,
@@ -139,7 +103,7 @@ const AdminEvents = () => {
     setShowModal(true);
   };
 
-  const openEdit = (event: any) => {
+  const openEdit = (event: EventItem) => {
     setEventId(event.id);
 
     setErrors({});
@@ -186,53 +150,38 @@ const AdminEvents = () => {
       return;
     }
 
-    setIsSaving(true);
+    const fd = new FormData();
+
+    fd.append("title", form.title);
+    fd.append("description", form.description);
+    fd.append("type", form.type);
+    fd.append("status", form.status);
+    fd.append("venue", form.venue);
+
+    fd.append("startAt", form.startAt);
+
+    if (form.endAt) {
+      fd.append("endAt", form.endAt);
+    }
+
+    if (form.registrationStart) {
+      fd.append("registrationStart", form.registrationStart);
+    }
+
+    if (form.registrationEnd) {
+      fd.append("registrationEnd", form.registrationEnd);
+    }
+
+    if (form.capacity) {
+      fd.append("capacity", form.capacity);
+    }
+
+    if (imageFile) {
+      fd.append("image", imageFile);
+    }
 
     try {
-      const fd = new FormData();
-
-      fd.append("title", form.title);
-      fd.append("description", form.description);
-      fd.append("type", form.type);
-      fd.append("status", form.status);
-      fd.append("venue", form.venue);
-
-      fd.append("startAt", form.startAt);
-
-      if (form.endAt) {
-        fd.append("endAt", form.endAt);
-      }
-
-      if (form.registrationStart) {
-        fd.append("registrationStart", form.registrationStart);
-      }
-
-      if (form.registrationEnd) {
-        fd.append("registrationEnd", form.registrationEnd);
-      }
-
-      if (form.capacity) {
-        fd.append("capacity", form.capacity);
-      }
-
-      if (imageFile) {
-        fd.append("image", imageFile);
-      }
-
-      const url = eventId ? `/api/events/${eventId}` : "/api/events";
-
-      const method = eventId ? "PATCH" : "POST";
-
-      const { data } = await axios({
-        url,
-        method,
-        data: fd,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      await refetch();
+      const data = await saveEvent.mutateAsync({ id: eventId, formData: fd });
 
       setPopup({
         show: true,
@@ -249,25 +198,15 @@ const AdminEvents = () => {
       setImageFile(null);
       setImagePreview(null);
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setPopup({
-          show: true,
-          type: "error",
-          message: err.response?.data?.message ?? "Something went wrong.",
-          isConfirm: false,
-          onConfirm: () => {},
-        });
-      } else {
-        setPopup({
-          show: true,
-          type: "error",
-          message: "Something went wrong.",
-          isConfirm: false,
-          onConfirm: () => {},
-        });
-      }
-    } finally {
-      setIsSaving(false);
+      setPopup({
+        show: true,
+        type: "error",
+        message: axios.isAxiosError(err)
+          ? (err.response?.data?.message ?? "Something went wrong.")
+          : "Something went wrong.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
     }
   };
 
@@ -408,7 +347,7 @@ const AdminEvents = () => {
           form={form}
           errors={errors}
           imagePreview={imagePreview}
-          isSaving={isSaving}
+          isSaving={saveEvent.isPending}
           updateField={updateField}
           setImageFile={setImageFile}
           setImagePreview={setImagePreview}

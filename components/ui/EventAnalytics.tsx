@@ -1,109 +1,195 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
+import { FieldType } from "@prisma/client";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import FieldModal from "./FieldModal";
+import Popup from "./Popup";
+import { useEvent, EventFormField } from "@/hooks/useEvents";
+import { useDeleteEventField, useSaveEventField } from "@/hooks/useEventfields";
 
-interface EventAnalyticsProps {
+interface Props {
   id: string;
 }
 
-interface Stats {
-  registrations: number;
-  attendance: number;
-  capacityFilled: string;
-  customFields: number;
+interface FieldValues {
+  name: string;
+  label: string;
+  type: FieldType;
+  required: boolean;
+  placeholder: string;
 }
 
-const EventAnalytics = ({ id }: EventAnalyticsProps) => {
-  const [stats, setStats] = useState<Stats>({
-    registrations: 0,
-    attendance: 0,
-    capacityFilled: "0%",
-    customFields: 0,
+export default function EventFields({ id }: Props) {
+  const { data: event, isLoading: loading } = useEvent(id);
+  const fields = event?.formFields ?? [];
+
+  const [showModal, setShowModal] = useState(false);
+  const [editingField, setEditingField] = useState<EventFormField | null>(null);
+
+  const saveField = useSaveEventField(id);
+  const deleteField = useDeleteEventField(id);
+
+  const [popup, setPopup] = useState({
+    show: false,
+    type: "success" as const,
+    message: "",
+    isConfirm: false,
+    onConfirm: () => {},
   });
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
+  const openAdd = () => {
+    setEditingField(null);
+    setShowModal(true);
+  };
 
-      try {
-        const [{ data: eventData }, { data: responseData }] = await Promise.all(
-          [
-            axios.get(`/api/events/${id}`),
-            axios.get(`/api/events/${id}/responses`, {
-              params: { page: 1, limit: 1 },
-            }),
-          ]
-        );
+  const openEdit = (field: EventFormField) => {
+    setEditingField(field);
+    setShowModal(true);
+  };
 
-        const event = eventData.event;
-        const total = responseData.pagination?.total ?? 0;
+  const onSubmitField = async (values: FieldValues) => {
+    try {
+      await saveField.mutateAsync({
+        fieldId: editingField?.id ?? null,
+        values,
+        order: fields.length,
+      });
 
-        const { data: allResponses } = await axios.get(
-          `/api/events/${id}/responses`,
-          { params: { page: 1, limit: Math.max(total, 1) } }
-        );
+      setShowModal(false);
+      setEditingField(null);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to save this field.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    }
+  };
 
-        const attended = (allResponses.data ?? []).filter(
-          (r: { attendance: boolean }) => r.attendance
-        ).length;
+  const confirmDelete = (field: EventFormField) => {
+    setPopup({
+      show: true,
+      type: "success",
+      message: `Delete field "${field.label}"?`,
+      isConfirm: true,
+      onConfirm: async () => {
+        setPopup((p) => ({ ...p, show: false }));
 
-        const capacityFilled = event?.capacity
-          ? `${Math.min(100, Math.round((total / event.capacity) * 100))}%`
-          : "—";
+        try {
+          await deleteField.mutateAsync(field.id);
+        } catch (err) {
+          console.error(err);
+          setPopup({
+            show: true,
+            type: "success",
+            message: "Unable to delete this field.",
+            isConfirm: false,
+            onConfirm: () => {},
+          });
+        }
+      },
+    });
+  };
 
-        setStats({
-          registrations: total,
-          attendance: attended,
-          capacityFilled,
-          customFields: event?.formFields?.length ?? 0,
-        });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    load();
-  }, [id]);
-
-  const statItems = [
-    { title: "Registrations", value: stats.registrations },
-    { title: "Attendance", value: stats.attendance },
-    { title: "Capacity Filled", value: stats.capacityFilled },
-    { title: "Custom Fields", value: stats.customFields },
-  ];
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-white">Analytics</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">Registration Form</h2>
 
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {statItems.map((item) => (
+        <button
+          onClick={openAdd}
+          className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-black"
+        >
+          {" "}
+          <Plus className="h-4 w-4" />
+          Add Field
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {fields.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-white/10 py-16 text-center text-neutral-500">
+            No registration fields yet. Add one to start building the form.
+          </p>
+        )}
+
+        {fields.map((field) => (
           <div
-            key={item.title}
-            className="rounded-3xl border border-white/10 bg-[#111] p-6"
+            key={field.id}
+            className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#111] p-5"
           >
-            <p className="text-sm text-neutral-500">{item.title}</p>
+            <div>
+              <h3 className="font-semibold text-white">{field.label}</h3>
 
-            <h3 className="mt-4 text-4xl font-bold text-white">
-              {isLoading ? "—" : item.value}
-            </h3>
+              <p className="text-sm text-neutral-500">{field.type}</p>
+
+              {field.required && (
+                <span className="mt-2 inline-block rounded-full bg-red-500/20 px-3 py-1 text-xs text-red-300">
+                  Required
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => openEdit(field)}
+                className="rounded-lg p-2 hover:bg-white/10"
+              >
+                <Pencil className="h-4 w-4 text-white" />
+              </button>
+
+              <button
+                onClick={() => confirmDelete(field)}
+                className="rounded-lg p-2 hover:bg-red-500/20"
+              >
+                <Trash2 className="h-4 w-4 text-red-400" />
+              </button>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-[#111] p-8">
-        <h3 className="text-xl font-semibold text-white">Registration Trend</h3>
+      <FieldModal
+        open={showModal}
+        loading={saveField.isPending}
+        initialValues={
+          editingField
+            ? {
+                name: editingField.name,
+                label: editingField.label,
+                type: editingField.type,
+                required: editingField.required,
+                placeholder: editingField.placeholder ?? "",
+              }
+            : undefined
+        }
+        onClose={() => {
+          setShowModal(false);
+          setEditingField(null);
+        }}
+        onSubmit={onSubmitField}
+      />
 
-        <div className="mt-6 flex h-72 items-center justify-center rounded-2xl border border-dashed border-white/10">
-          <p className="text-neutral-500">Chart coming soon.</p>
-        </div>
-      </div>
+      <Popup
+        show={popup.show}
+        type={popup.type}
+        message={popup.message}
+        isConfirm={popup.isConfirm}
+        onConfirm={popup.onConfirm}
+        onClose={() => setPopup((p) => ({ ...p, show: false }))}
+      />
     </div>
   );
-};
-
-export default EventAnalytics;
+}

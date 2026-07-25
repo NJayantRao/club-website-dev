@@ -1,38 +1,30 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Plus, Trash2, Pencil, X, Image as ImageIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
-import axios from "axios";
+import {
+  GalleryAlbum,
+  useDeleteGalleryAlbum,
+  useGallery,
+  useRemoveGalleryPhoto,
+  useSaveGalleryAlbum,
+} from "@/hooks/useGallery";
 
 const LIMIT = 9;
 
-interface GalleryImage {
-  id: string;
-  imageUrl: string;
-}
-
-interface GalleryAlbum {
-  id: string;
-  groupName: string;
-  images: GalleryImage[];
-}
-
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
 const AdminGallery: React.FC = () => {
   const [page, setPage] = useState(1);
-  const [gallery, setGallery] = useState<GalleryAlbum[]>([]);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, loading: isLoading } = useGallery({ page, limit: LIMIT });
+  const gallery = data.data;
+  const pagination = data.pagination;
+
+  const saveAlbum = useSaveGalleryAlbum();
+  const deleteAlbum = useDeleteGalleryAlbum();
+  const removePhoto = useRemoveGalleryPhoto();
+
   const [showModal, setShowModal] = useState(false);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
-  const [saving, setSaving] = useState(false);
   const [popup, setPopup] = useState({
     show: false,
     type: "success" as const,
@@ -44,29 +36,6 @@ const AdminGallery: React.FC = () => {
 
   const [editingAlbum, setEditingAlbum] = useState<GalleryAlbum | null>(null);
   const [removingImageId, setRemovingImageId] = useState<string | null>(null);
-
-  const fetchGallery = async (pageNum = page) => {
-    setIsLoading(true);
-
-    try {
-      const { data } = await axios.get(
-        `/api/gallery?page=${pageNum}&limit=${LIMIT}`
-      );
-
-      setGallery(data.data ?? []);
-      setPagination(data.pagination ?? null);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchGallery(
-      page
-    ); /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [page]);
 
   const openAdd = () => {
     setEditingAlbum(null);
@@ -92,25 +61,13 @@ const AdminGallery: React.FC = () => {
         isConfirm: false,
         onConfirm: () => {},
       });
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append("groupName", groupName);
-      photoFiles.forEach((f) => fd.append("photos", f));
 
-      if (editingAlbum) {
-        await axios.patch(`/api/gallery/${editingAlbum.id}`, fd, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-      } else {
-        await axios.post("/api/gallery", fd, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-      }
+    try {
+      await saveAlbum.mutateAsync({
+        albumId: editingAlbum?.id ?? null,
+        groupName,
+        photos: photoFiles,
+      });
 
       setShowModal(false);
       setPhotoFiles([]);
@@ -124,11 +81,8 @@ const AdminGallery: React.FC = () => {
         onConfirm: () => {},
       });
 
-      if (editingAlbum) {
-        fetchGallery(page);
-      } else {
+      if (!editingAlbum) {
         setPage(1);
-        fetchGallery(1);
       }
     } catch (err) {
       console.error(err);
@@ -139,8 +93,6 @@ const AdminGallery: React.FC = () => {
         isConfirm: false,
         onConfirm: () => {},
       });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -148,15 +100,13 @@ const AdminGallery: React.FC = () => {
     setRemovingImageId(imageId);
 
     try {
-      await axios.delete(`/api/gallery/${albumId}/media/${imageId}`);
+      await removePhoto.mutateAsync({ albumId, imageId });
 
       setEditingAlbum((prev) =>
         prev
           ? { ...prev, images: prev.images.filter((img) => img.id !== imageId) }
           : prev
       );
-
-      fetchGallery(page);
     } catch (err) {
       console.error(err);
       setPopup({
@@ -190,10 +140,10 @@ const AdminGallery: React.FC = () => {
       message: `Delete "${name}"?`,
       isConfirm: true,
       onConfirm: async () => {
+        setPopup((p) => ({ ...p, show: false }));
+
         try {
-          await axios.delete(`/api/gallery/${id}`);
-          setPopup((p) => ({ ...p, show: false }));
-          fetchGallery(page);
+          await deleteAlbum.mutateAsync(id);
         } catch (err) {
           console.error(err);
           setPopup({
@@ -396,10 +346,10 @@ const AdminGallery: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saveAlbum.isPending}
                   className="flex-1 py-3 bg-white text-black rounded-xl font-semibold text-sm disabled:opacity-50"
                 >
-                  {saving
+                  {saveAlbum.isPending
                     ? "Saving..."
                     : editingAlbum
                       ? "Save Changes"

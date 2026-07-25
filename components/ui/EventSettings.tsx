@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import { Loader2 } from "lucide-react";
+import { useEvent, useSaveEvent, useDeleteEvent } from "@/hooks/useEvents";
 
 interface EventSettingsProps {
   id: string;
@@ -12,63 +12,33 @@ interface EventSettingsProps {
 const EventSettings = ({ id }: EventSettingsProps) => {
   const router = useRouter();
 
-  const [registrationEnabled, setRegistrationEnabled] = useState(true);
-  const [loadingStatus, setLoadingStatus] = useState(true);
-  const [togglingRegistration, setTogglingRegistration] = useState(false);
+  const { data: event, isLoading: loadingStatus } = useEvent(id);
+
+  // NOTE: `registrationEnabled` isn't a field on the Event model (it only
+  // has registrationStart/registrationEnd dates) — this toggle was already
+  // a no-op before this refactor. Left as-is to avoid scope creep; flagging
+  // it here rather than silently leaving it unexplained.
+  const registrationEnabled =
+    (event as unknown as { registrationEnabled?: boolean })
+      ?.registrationEnabled ?? true;
+
+  const saveEvent = useSaveEvent();
+  const deleteEvent = useDeleteEvent();
+
   const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function fetchEvent() {
-      setLoadingStatus(true);
-
-      try {
-        const { data } = await axios.get(`/api/events/${id}`);
-
-        if (!cancelled) {
-          setRegistrationEnabled(data.event.registrationEnabled ?? true);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        if (!cancelled) {
-          setLoadingStatus(false);
-        }
-      }
-    }
-
-    fetchEvent();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
 
   async function handleToggleRegistration() {
     const next = !registrationEnabled;
 
-    setTogglingRegistration(true);
-
     try {
       const formData = new FormData();
-
       formData.append("registrationEnabled", String(next));
 
-      await axios.patch(`/api/events/${id}`, formData);
-
-      setRegistrationEnabled(next);
+      await saveEvent.mutateAsync({ id, formData });
     } catch (error) {
       console.error(error);
-
       alert("Failed to update registration status.");
-    } finally {
-      setTogglingRegistration(false);
     }
-  }
-
-  function handleManageAttendance() {
-    router.push(`/dashboard/events/${id}/attendance`);
   }
 
   async function handleDelete() {
@@ -81,14 +51,11 @@ const EventSettings = ({ id }: EventSettingsProps) => {
     setDeleting(true);
 
     try {
-      await axios.delete(`/api/events/${id}`);
-
+      await deleteEvent.mutateAsync(id);
       router.push("/dashboard?tab=events");
     } catch (error) {
       console.error(error);
-
       alert("Failed to delete event.");
-
       setDeleting(false);
     }
   }
@@ -112,14 +79,14 @@ const EventSettings = ({ id }: EventSettingsProps) => {
 
             <button
               onClick={handleToggleRegistration}
-              disabled={loadingStatus || togglingRegistration}
+              disabled={loadingStatus || saveEvent.isPending}
               className={`flex items-center gap-2 rounded-xl px-4 py-2 font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
                 registrationEnabled
                   ? "bg-green-500/20 text-green-300 hover:bg-green-500/30"
                   : "bg-white/10 text-neutral-300 hover:bg-white/20"
               }`}
             >
-              {togglingRegistration && (
+              {saveEvent.isPending && (
                 <Loader2 size={16} className="animate-spin" />
               )}
               {loadingStatus

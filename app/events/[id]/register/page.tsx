@@ -1,6 +1,5 @@
 "use client";
 
-import { EventFormField } from "@prisma/client";
 import axios from "axios";
 import {
   Calendar,
@@ -12,18 +11,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-
-interface EventData {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  venue: string | null;
-  capacity: number | null;
-  startAt: Date | string;
-  formFields: EventFormField[];
-}
+import { useState } from "react";
+import { useEvent } from "@/hooks/useEvents";
+import { useRegisterForEvent } from "@/hooks/useEventResponses";
 
 interface PersonalDetails {
   name: string;
@@ -42,7 +32,7 @@ const EMPTY_DETAILS: PersonalDetails = {
 export default function RegisterEventPage() {
   const { id } = useParams<{ id: string }>();
 
-  const [event, setEvent] = useState<EventData | null>(null);
+  const { data: event } = useEvent(id);
 
   const [details, setDetails] = useState<PersonalDetails>(EMPTY_DETAILS);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -50,26 +40,9 @@ export default function RegisterEventPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const { data } = await axios.get(`/api/events/${id}`);
-
-        if (data.success) {
-          setEvent(data.event);
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    if (id) {
-      fetchEvent();
-    }
-  }, [id]);
+  const registerForEvent = useRegisterForEvent(id);
 
   const updateDetail = (key: keyof PersonalDetails, value: string) => {
     setDetails((prev) => ({ ...prev, [key]: value }));
@@ -112,18 +85,14 @@ export default function RegisterEventPage() {
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
-      const res = await axios.post(`/api/events/${id}/responses`, {
+      await registerForEvent.mutateAsync({
         name: details.name,
         email: details.email,
         phone: details.phone || undefined,
         college: details.college || undefined,
         answers,
       });
-
-      console.log(res);
 
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -135,8 +104,6 @@ export default function RegisterEventPage() {
       } else {
         setSubmitError("Failed to submit registration.");
       }
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -298,14 +265,14 @@ export default function RegisterEventPage() {
           </div>
 
           {/* Dynamic Fields */}
-          {event.formFields.length > 0 && (
+          {(event.formFields ?? []).length > 0 && (
             <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-8">
               <h2 className="mb-6 text-2xl font-semibold">
                 Additional Information
               </h2>
 
               <div className="space-y-5">
-                {event.formFields.map((field) => (
+                {(event.formFields ?? []).map((field) => (
                   <div key={field.id}>
                     <label className="mb-2 block text-sm text-neutral-300">
                       {field.label}
@@ -389,10 +356,10 @@ export default function RegisterEventPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={registerForEvent.isPending}
               className="mt-8 w-full rounded-2xl bg-white py-4 text-lg font-semibold text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Submitting..." : "Register Now"}
+              {registerForEvent.isPending ? "Submitting..." : "Register Now"}
             </button>
           </div>
         </form>

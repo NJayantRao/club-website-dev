@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import "./globals.css";
 import AuthProvider from "@/context/AuthProvider";
+import QueryProvider from "@/context/QueryProvider";
 
 export const metadata = {
   title: "Club Excel",
@@ -15,9 +16,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <Layout>{children}</Layout>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <Layout>{children}</Layout>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

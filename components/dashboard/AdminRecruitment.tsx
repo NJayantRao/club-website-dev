@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Trash2,
@@ -16,40 +16,17 @@ import {
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
-import axios from "axios";
+import {
+  RecruitmentApplication,
+  useAdminRecruitment,
+  useClearAllRecruitment,
+  useDeleteRecruitmentApplication,
+  useUpdateRecruitmentSelection,
+} from "@/hooks/useRecruitments";
 
 const LIMIT = 15;
 
-interface RecruitmentApplication {
-  id: string;
-  name: string;
-  rollNo: string;
-  instituteEmail: string;
-  personalEmail: string;
-  gender: string;
-  branch: string;
-  phoneNo: string;
-  locality: string;
-  techStack: string;
-  isSelected: boolean;
-  createdAt: string;
-}
-
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
 type SelectionFilter = "all" | "selected" | "pending";
-
-const fetchRecruitment = async (page: number) => {
-  const { data } = await axios.get(
-    `/api/recruitment?page=${page}&limit=${LIMIT}`
-  );
-  return data;
-};
 
 function initials(name: string) {
   return name
@@ -62,12 +39,18 @@ function initials(name: string) {
 
 const AdminRecruitment: React.FC = () => {
   const [page, setPage] = useState(1);
-  const [recruits, setRecruits] = useState<RecruitmentApplication[]>([]);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<SelectionFilter>("all");
+
+  const { data, isLoading } = useAdminRecruitment(page, LIMIT);
+  const recruits = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
+
+  const updateSelectionMutation = useUpdateRecruitmentSelection();
+  const deleteOneMutation = useDeleteRecruitmentApplication();
+  const clearAllMutation = useClearAllRecruitment();
+
   const [popup, setPopup] = useState({
     show: false,
     type: "success" as const,
@@ -76,27 +59,9 @@ const AdminRecruitment: React.FC = () => {
     onConfirm: () => {},
   });
 
-  const load = async (pageNum = page) => {
-    setIsLoading(true);
-    try {
-      const data = await fetchRecruitment(pageNum);
-      setRecruits(data.data ?? []);
-      setPagination(data.pagination ?? null);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load(page); /* eslint-disable-next-line react-hooks/exhaustive-deps */
-  }, [page]);
-
   const updateSelection = async (id: string, isSelected: boolean) => {
     try {
-      await axios.put(`/api/recruitment/${id}`, { isSelected });
-      load(page);
+      await updateSelectionMutation.mutateAsync({ id, isSelected });
     } catch (err) {
       console.error(err);
       setPopup({
@@ -109,50 +74,29 @@ const AdminRecruitment: React.FC = () => {
     }
   };
 
-  const deleteOne = async (id: string) => {
-    try {
-      await axios.delete(`/api/recruitment/${id}`);
-      load(page);
-    } catch (err) {
-      console.error(err);
-      setPopup({
-        show: true,
-        type: "success",
-        message: "Unable to delete.",
-        isConfirm: false,
-        onConfirm: () => {},
-      });
-    }
-  };
-
   const confirmDeleteOne = (id: string, name: string) =>
     setPopup({
       show: true,
       type: "success",
       message: `Delete application from ${name}?`,
       isConfirm: true,
-      onConfirm: () => {
-        deleteOne(id);
+      onConfirm: async () => {
         setPopup((p) => ({ ...p, show: false }));
+
+        try {
+          await deleteOneMutation.mutateAsync(id);
+        } catch (err) {
+          console.error(err);
+          setPopup({
+            show: true,
+            type: "success",
+            message: "Unable to delete.",
+            isConfirm: false,
+            onConfirm: () => {},
+          });
+        }
       },
     });
-
-  const deleteAll = async () => {
-    try {
-      await axios.delete("/api/recruitment");
-      load(1);
-      setPage(1);
-    } catch (err) {
-      console.error(err);
-      setPopup({
-        show: true,
-        type: "success",
-        message: "Unable to clear.",
-        isConfirm: false,
-        onConfirm: () => {},
-      });
-    }
-  };
 
   const confirmDeleteAll = () =>
     setPopup({
@@ -160,9 +104,22 @@ const AdminRecruitment: React.FC = () => {
       type: "success",
       message: "Delete ALL recruitment records? This cannot be undone.",
       isConfirm: true,
-      onConfirm: () => {
-        deleteAll();
+      onConfirm: async () => {
         setPopup((p) => ({ ...p, show: false }));
+
+        try {
+          await clearAllMutation.mutateAsync();
+          setPage(1);
+        } catch (err) {
+          console.error(err);
+          setPopup({
+            show: true,
+            type: "success",
+            message: "Unable to clear.",
+            isConfirm: false,
+            onConfirm: () => {},
+          });
+        }
       },
     });
 

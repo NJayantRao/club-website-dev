@@ -8,67 +8,18 @@ import axios from "axios";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
 import MemberModal from "../ui/MemberModal";
+import {
+  Member,
+  useDeleteMember,
+  useMembers,
+  useSaveMember,
+} from "@/hooks/useMembers";
 
-export interface Member {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  role: Role;
-  designation: string | null;
-  year: string | null;
-  skills: string[];
-  imageUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { Member };
 
 export interface AdminMembersProps {
   role?: "MEMBER" | "ADVISOR" | "ALUMNI";
 }
-
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-const useAdminList = <T,>(url: string) => {
-  const [data, setData] = React.useState<T[]>([]);
-  const [pagination, setPagination] = React.useState<PaginationInfo | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-
-    try {
-      const { data: response } = await axios.get(url);
-
-      setData(response.data ?? []);
-      setPagination(response.pagination ?? null);
-    } catch (err) {
-      console.error(err);
-      setData([]);
-      setPagination(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    fetchData();
-  }, [url]);
-
-  return {
-    data,
-    pagination,
-    isLoading,
-    refetch: fetchData,
-  } as const;
-};
 
 type FieldErrors = Record<string, string>;
 
@@ -226,14 +177,13 @@ const MemberSection = ({
 const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
   const [page, setPage] = useState(1);
 
-  const {
-    data: members,
-    pagination,
-    isLoading,
-    refetch,
-  } = useAdminList<Member>(
-    `/api/our-team?page=${page}&limit=${LIMIT}&sortBy=year&role=${role}`
-  );
+  const { data, isLoading } = useMembers({ role, page, limit: LIMIT });
+
+  const members = data?.data ?? [];
+  const pagination = data?.pagination ?? null;
+
+  const saveMember = useSaveMember();
+  const deleteMemberMutation = useDeleteMember();
 
   const { current, alumni, advisors } = useMemo(() => {
     const groups: { current: Member[]; alumni: Member[]; advisors: Member[] } =
@@ -269,8 +219,6 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-
-  const [isSaving, setIsSaving] = useState(false);
 
   const [popup, setPopup] = useState<PopupState>({
     show: false,
@@ -325,46 +273,31 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       return;
     }
 
-    setIsSaving(true);
+    const fd = new FormData();
+
+    fd.append("name", form.name);
+    fd.append("email", form.email);
+    fd.append("phone", form.phone);
+    fd.append("role", form.role);
+    fd.append("year", form.year);
+    fd.append("designation", form.designation);
+
+    fd.append(
+      "skills",
+      JSON.stringify(
+        form.skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean)
+      )
+    );
+
+    if (imageFile) {
+      fd.append("image", imageFile);
+    }
 
     try {
-      const fd = new FormData();
-
-      fd.append("name", form.name);
-      fd.append("email", form.email);
-      fd.append("phone", form.phone);
-      fd.append("role", form.role);
-      fd.append("year", form.year);
-      fd.append("designation", form.designation);
-
-      fd.append(
-        "skills",
-        JSON.stringify(
-          form.skills
-            .split(",")
-            .map((skill) => skill.trim())
-            .filter(Boolean)
-        )
-      );
-
-      if (imageFile) {
-        fd.append("image", imageFile);
-      }
-
-      const url = memberId ? `/api/members/${memberId}` : "/api/members";
-
-      const method = memberId ? "PATCH" : "POST";
-
-      const { data } = await axios({
-        url,
-        method,
-        data: fd,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      refetch();
+      const data = await saveMember.mutateAsync({ id: memberId, formData: fd });
 
       setPopup({
         show: true,
@@ -381,51 +314,15 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       setImagePreview(null);
       setErrors({});
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setPopup({
-          show: true,
-          type: "error",
-          message: err.response?.data?.message ?? "Something went wrong.",
-          isConfirm: false,
-          onConfirm: () => {},
-        });
-      } else {
-        setPopup({
-          show: true,
-          type: "error",
-          message: "Something went wrong.",
-          isConfirm: false,
-          onConfirm: () => {},
-        });
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteMember = async (id: string) => {
-    try {
-      const { data } = await axios.delete(`/api/members/${id}`);
-
-      refetch();
-
       setPopup({
         show: true,
-        type: "success",
-        message: data.message,
+        type: "error",
+        message: axios.isAxiosError(err)
+          ? (err.response?.data?.message ?? "Something went wrong.")
+          : "Something went wrong.",
         isConfirm: false,
         onConfirm: () => {},
       });
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setPopup({
-          show: true,
-          type: "error",
-          message: err.response?.data?.message ?? "Failed to delete member.",
-          isConfirm: false,
-          onConfirm: () => {},
-        });
-      }
     }
   };
 
@@ -435,12 +332,30 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       type: "confirm",
       message: `Delete ${member.name}?`,
       isConfirm: true,
-      onConfirm: () => {
-        deleteMember(member.id);
-        setPopup((prev) => ({
-          ...prev,
-          show: false,
-        }));
+      onConfirm: async () => {
+        setPopup((prev) => ({ ...prev, show: false }));
+
+        try {
+          const data = await deleteMemberMutation.mutateAsync(member.id);
+
+          setPopup({
+            show: true,
+            type: "success",
+            message: data.message,
+            isConfirm: false,
+            onConfirm: () => {},
+          });
+        } catch (err) {
+          setPopup({
+            show: true,
+            type: "error",
+            message: axios.isAxiosError(err)
+              ? (err.response?.data?.message ?? "Failed to delete member.")
+              : "Failed to delete member.",
+            isConfirm: false,
+            onConfirm: () => {},
+          });
+        }
       },
     });
   };
@@ -526,7 +441,7 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
           form={form}
           errors={errors}
           imagePreview={imagePreview}
-          isSaving={isSaving}
+          isSaving={saveMember.isPending}
           updateField={updateField}
           setImageFile={setImageFile}
           setImagePreview={setImagePreview}

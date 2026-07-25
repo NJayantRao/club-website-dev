@@ -1,63 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-import {
-  CalendarDays,
-  MapPin,
-  Users,
-  Clock3,
-  Pencil,
-  Eye,
-  Share2,
-  CalendarRange,
-} from "lucide-react";
-import { EventType } from "@prisma/client";
+import { useMemo, useState } from "react";
+import { Pencil, CalendarRange } from "lucide-react";
 import EditEventModal from "./ui/EditEventModal";
+import { useEvent } from "@/hooks/useEvents";
 
 interface EventOverviewProps {
   id: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  status: string;
-  type: EventType;
-  venue: string | null;
-  startAt: string;
-  endAt: string | null;
-  registrationStart: string | null;
-  registrationEnd: string | null;
-  capacity: number | null;
-}
-
 export default function EventOverview({ id }: EventOverviewProps) {
-  const [event, setEvent] = useState<Event | null>(null);
+  const { data: event, isLoading: loading } = useEvent(id);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  async function fetchEvent() {
-    setLoading(true);
-
-    try {
-      const { data } = await axios.get(`/api/events/${id}`);
-
-      setEvent(data.event);
-    } catch (error) {
-      console.error(error);
-
-      setEvent(null);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchEvent();
-  }, [id]);
 
   const statusColor = useMemo(() => {
     switch (event?.status) {
@@ -240,7 +194,7 @@ export default function EventOverview({ id }: EventOverviewProps) {
                 {event.status === "COMPLETED" &&
                   "The event has ended successfully."}
 
-                {event.status === "CANCELLED" &&
+                {event.status === "CANCELED" &&
                   "This event has been cancelled."}
               </p>
             </div>
@@ -285,7 +239,6 @@ export default function EventOverview({ id }: EventOverviewProps) {
           onClose={() => setIsEditOpen(false)}
           event={event}
           onUpdated={() => {
-            fetchEvent();
             setIsEditOpen(false);
           }}
         />

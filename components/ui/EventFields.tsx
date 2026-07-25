@@ -1,25 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 import { FieldType } from "@prisma/client";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import FieldModal from "./FieldModal";
 import Popup from "./Popup";
+import { useEvent, EventFormField } from "@/hooks/useEvents";
+import { useDeleteEventField, useSaveEventField } from "@/hooks/useEventfields";
 
 interface Props {
   id: string;
-}
-
-interface EventFormField {
-  id: string;
-  eventId: string;
-  name: string;
-  label: string;
-  type: FieldType;
-  required: boolean;
-  placeholder: string | null;
-  order: number | null;
 }
 
 interface FieldValues {
@@ -31,12 +21,14 @@ interface FieldValues {
 }
 
 export default function EventFields({ id }: Props) {
-  const [fields, setFields] = useState<EventFormField[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: event, isLoading: loading } = useEvent(id);
+  const fields = event?.formFields ?? [];
+
   const [showModal, setShowModal] = useState(false);
   const [editingField, setEditingField] = useState<EventFormField | null>(null);
 
-  const [isSaving, setIsSaving] = useState(false);
+  const saveField = useSaveEventField(id);
+  const deleteField = useDeleteEventField(id);
 
   const [popup, setPopup] = useState({
     show: false,
@@ -45,20 +37,6 @@ export default function EventFields({ id }: Props) {
     isConfirm: false,
     onConfirm: () => {},
   });
-
-  const fetchFields = async () => {
-    setLoading(true);
-
-    try {
-      const { data } = await axios.get(`/api/events/${id}`);
-
-      setFields(data.event.formFields ?? []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openAdd = () => {
     setEditingField(null);
@@ -70,23 +48,13 @@ export default function EventFields({ id }: Props) {
     setShowModal(true);
   };
 
-  const saveField = async (values: FieldValues) => {
-    setIsSaving(true);
-
+  const onSubmitField = async (values: FieldValues) => {
     try {
-      if (editingField) {
-        await axios.patch(
-          `/api/events/${id}/form-fields/${editingField.id}`,
-          values
-        );
-      } else {
-        await axios.post(`/api/events/${id}/form-fields`, {
-          ...values,
-          order: fields.length,
-        });
-      }
-
-      await fetchFields();
+      await saveField.mutateAsync({
+        fieldId: editingField?.id ?? null,
+        values,
+        order: fields.length,
+      });
 
       setShowModal(false);
       setEditingField(null);
@@ -99,24 +67,6 @@ export default function EventFields({ id }: Props) {
         isConfirm: false,
         onConfirm: () => {},
       });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteField = async (field: EventFormField) => {
-    try {
-      await axios.delete(`/api/events/${id}/form-fields/${field.id}`);
-      await fetchFields();
-    } catch (err) {
-      console.error(err);
-      setPopup({
-        show: true,
-        type: "success",
-        message: "Unable to delete this field.",
-        isConfirm: false,
-        onConfirm: () => {},
-      });
     }
   };
 
@@ -126,16 +76,24 @@ export default function EventFields({ id }: Props) {
       type: "success",
       message: `Delete field "${field.label}"?`,
       isConfirm: true,
-      onConfirm: () => {
-        deleteField(field);
+      onConfirm: async () => {
         setPopup((p) => ({ ...p, show: false }));
+
+        try {
+          await deleteField.mutateAsync(field.id);
+        } catch (err) {
+          console.error(err);
+          setPopup({
+            show: true,
+            type: "success",
+            message: "Unable to delete this field.",
+            isConfirm: false,
+            onConfirm: () => {},
+          });
+        }
       },
     });
   };
-
-  useEffect(() => {
-    fetchFields();
-  }, [id]);
 
   if (loading) {
     return (
@@ -205,7 +163,7 @@ export default function EventFields({ id }: Props) {
 
       <FieldModal
         open={showModal}
-        loading={isSaving}
+        loading={saveField.isPending}
         initialValues={
           editingField
             ? {
@@ -221,7 +179,7 @@ export default function EventFields({ id }: Props) {
           setShowModal(false);
           setEditingField(null);
         }}
-        onSubmit={saveField}
+        onSubmit={onSubmitField}
       />
 
       <Popup

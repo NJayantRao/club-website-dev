@@ -27,7 +27,7 @@ import AdminQueries from "../../components/dashboard/AdminQueries";
 import AdminRecruitment from "../../components/dashboard/AdminRecruitment";
 import AdminAchievements from "../../components/dashboard/AdminAchievements";
 import AdminGallery from "../../components/dashboard/AdminGallery";
-import axios from "axios";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -174,21 +174,6 @@ const SidebarContent = ({
   );
 };
 
-const fetchStats = async () => {
-  const [mRes, eRes, qRes, rRes] = await Promise.all([
-    axios.get("/api/our-team?role=ALL&limit=1"),
-    axios.get("/api/events?limit=1"),
-    axios.get("/api/contact-us?limit=1"),
-    axios.get("/api/recruitment?limit=1"),
-  ]);
-  return {
-    members: mRes.data.pagination?.total ?? 0,
-    events: eRes.data.pagination?.total ?? 0,
-    queries: qRes.data.pagination?.total ?? 0,
-    recruits: rRes.data.pagination?.total ?? 0,
-  };
-};
-
 const DashboardContent = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -207,12 +192,14 @@ const DashboardContent = () => {
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const [stats, setStats] = useState({
+  const { data: statsData } = useDashboardStats(status === "authenticated");
+
+  const stats = statsData ?? {
     members: 0,
     events: 0,
     queries: 0,
     recruits: 0,
-  });
+  };
 
   const setActiveTab = (id: string) => {
     setActiveTabState(id);
@@ -234,20 +221,6 @@ const DashboardContent = () => {
     const next = isValidTab ? (requestedTab as string) : "dashboard";
     setActiveTabState((current) => (current === next ? current : next));
   }, [searchParams]);
-
-  useEffect(() => {
-    let mounted = true;
-    if (status === "authenticated") {
-      fetchStats()
-        .then((s) => {
-          if (mounted) setStats(s);
-        })
-        .catch(() => {});
-    }
-    return () => {
-      mounted = false;
-    };
-  }, [status]);
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/" });

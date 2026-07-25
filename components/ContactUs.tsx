@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { z } from "zod";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
-import axios from "axios";
+import { useSubmitContact } from "@/hooks/useContactus";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -14,10 +14,6 @@ const contactSchema = z.object({
 });
 
 type ContactFormData = z.infer<typeof contactSchema>;
-
-const submitContact = async (data: ContactFormData) => {
-  await axios.post("/api/contact-us", data);
-};
 
 const ContactUs = () => {
   const [formData, setFormData] = useState<ContactFormData>({
@@ -32,9 +28,10 @@ const ContactUs = () => {
     Partial<Record<keyof ContactFormData, string>>
   >({});
 
-  const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const submitContact = useSubmitContact();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -77,9 +74,7 @@ const ContactUs = () => {
     }
 
     try {
-      setIsPending(true);
-
-      await submitContact(result.data);
+      await submitContact.mutateAsync(result.data);
 
       setIsSuccess(true);
 
@@ -92,8 +87,6 @@ const ContactUs = () => {
       });
     } catch (err) {
       setError((err as Error).message);
-    } finally {
-      setIsPending(false);
     }
   };
 
@@ -217,11 +210,11 @@ const ContactUs = () => {
 
             <button
               type="submit"
-              disabled={isPending}
+              disabled={submitContact.isPending}
               className="w-full group relative p-1 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 hover:scale-[1.02] transition-all duration-300 active:scale-[0.98] disabled:opacity-50"
             >
               <div className="bg-[#080808] rounded-[0.9rem] py-4 flex items-center justify-center gap-3">
-                {isPending ? (
+                {submitContact.isPending ? (
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>

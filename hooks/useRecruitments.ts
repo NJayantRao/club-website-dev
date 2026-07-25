@@ -1,95 +1,130 @@
+"use client";
+
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-interface FetchParams {
-  page?: number;
-  limit?: number;
-  type?: string;
+export interface RecruitmentApplication {
+  id: string;
+  name: string;
+  rollNo: string;
+  instituteEmail: string;
+  personalEmail: string;
+  gender: string;
+  branch: string;
+  phoneNo: string;
+  locality: string;
+  techStack: string;
+  isSelected: boolean;
+  createdAt: string;
 }
 
-const fetchRecruitment = async (params: FetchParams = {}) => {
-  const query = new URLSearchParams();
-
-  if (params.page) query.set("page", String(params.page));
-  if (params.limit) query.set("limit", String(params.limit));
-  if (params.type) query.set("type", params.type);
-
-  const { data } = await axios.get(`/api/recruitment?${query}`);
-
-  return data;
-};
-
-export function useRecruitmentList(params: FetchParams = {}) {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const result = await fetchRecruitment(params);
-
-        if (mounted) {
-          setData(result);
-        }
-      } catch (err) {
-        if (mounted) {
-          setError(err as Error);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [params.page, params.limit, params.type]);
-
-  return {
-    data,
-    loading,
-    error,
-    refetch: () => fetchRecruitment(params).then(setData),
-  };
+interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 }
 
+interface RecruitmentSubmission {
+  name: string;
+  rollNo: string;
+  instituteEmail: string;
+  personalEmail: string;
+  gender: string;
+  branch: string;
+  phoneNo: string;
+  locality: string;
+  techStack: string;
+}
+
+/** Public application form submission. */
 export function useSubmitRecruitment() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const mutation = useMutation({
+    mutationFn: async (payload: RecruitmentSubmission) => {
+      try {
+        const { data } = await axios.post("/api/recruitment", payload);
+        return data;
+      } catch (err) {
+        const message = axios.isAxiosError(err)
+          ? (err.response?.data?.message ?? err.message ?? "Submission failed")
+          : "Submission failed";
 
-  const submitRecruitment = async (data: any) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await axios.post("/api/recruitment", data);
-
-      return response.data;
-    } catch (err: any) {
-      const error =
-        err.response?.data?.message ?? err.message ?? "Submission failed";
-
-      const newError = new Error(error);
-      setError(newError);
-      throw newError;
-    } finally {
-      setLoading(false);
-    }
-  };
+        throw new Error(message);
+      }
+    },
+  });
 
   return {
-    submitRecruitment,
-    loading,
-    error,
+    submitRecruitment: mutation.mutateAsync,
+    loading: mutation.isPending,
+    error: mutation.error,
   };
+}
+
+/** Admin: paginated list of applications. */
+export function useAdminRecruitment(page: number, limit: number) {
+  return useQuery({
+    queryKey: ["recruitment", "admin-list", page, limit],
+    queryFn: async () => {
+      const { data } = await axios.get("/api/recruitment", {
+        params: { page, limit },
+      });
+
+      return {
+        data: (data.data ?? []) as RecruitmentApplication[],
+        pagination: (data.pagination ?? null) as PaginationInfo | null,
+      };
+    },
+    placeholderData: (previous) => previous,
+  });
+}
+
+export function useUpdateRecruitmentSelection() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      isSelected,
+    }: {
+      id: string;
+      isSelected: boolean;
+    }) => {
+      const { data } = await axios.put(`/api/recruitment/${id}`, {
+        isSelected,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recruitment"] });
+    },
+  });
+}
+
+export function useDeleteRecruitmentApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await axios.delete(`/api/recruitment/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recruitment"] });
+    },
+  });
+}
+
+export function useClearAllRecruitment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await axios.delete("/api/recruitment");
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recruitment"] });
+    },
+  });
 }
