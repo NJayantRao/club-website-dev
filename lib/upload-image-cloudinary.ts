@@ -1,32 +1,38 @@
 import { cloudinary } from "./cloudinary";
 
+export interface CloudinaryUploadResult {
+  url: string;
+  publicId: string;
+}
+
 const uploadImageToCloudinary = async (
   image: File,
   folder: string
-): Promise<string> => {
+): Promise<CloudinaryUploadResult> => {
   const bytes = await image.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const uploadResult = await new Promise<{ secure_url: string }>(
-    (resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            folder,
-          },
-          (error, result) => {
-            if (error) return reject(error);
-            if (!result?.secure_url) {
-              return reject(new Error("Cloudinary upload failed."));
-            }
-            resolve(result);
+  const uploadResult = await new Promise<{
+    secure_url: string;
+    public_id: string;
+  }>((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          folder,
+        },
+        (error, result) => {
+          if (error) return reject(error);
+          if (!result?.secure_url || !result?.public_id) {
+            return reject(new Error("Cloudinary upload failed."));
           }
-        )
-        .end(buffer);
-    }
-  );
+          resolve(result);
+        }
+      )
+      .end(buffer);
+  });
 
-  return uploadResult.secure_url;
+  return { url: uploadResult.secure_url, publicId: uploadResult.public_id };
 };
 
 export default uploadImageToCloudinary;

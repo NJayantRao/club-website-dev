@@ -110,9 +110,12 @@ export async function PATCH(
     const image = formData.get("image") as File | null;
 
     let newImageUrl: string | undefined;
+    let newImagePublicId: string | null = null;
 
     if (image && image.size > 0) {
-      newImageUrl = await uploadImageToCloudinary(image, "club-members");
+      const uploaded = await uploadImageToCloudinary(image, "club-members");
+      newImageUrl = uploaded.url;
+      newImagePublicId = uploaded.publicId;
     }
 
     const member = await prisma.$transaction(async (tx) => {
@@ -132,7 +135,13 @@ export async function PATCH(
       });
 
       if (newImageUrl) {
-        await replaceMedia(MediaUsageType.PROFILE, id, newImageUrl, tx);
+        await replaceMedia(
+          MediaUsageType.PROFILE,
+          id,
+          newImageUrl,
+          newImagePublicId,
+          tx
+        );
       }
 
       return updated;

@@ -87,6 +87,7 @@ model Achievement {
   tag         AchievementType
   members     Member[]        @relation("AchievementMembers")
 }
+
 model GalleryAlbum {
   id        String   @id @default(uuid())
   name      String
@@ -96,6 +97,7 @@ model GalleryAlbum {
 model Media {
   id        String       @id @default(uuid())
   url       String
+  publicId  String?
   caption   String?
   createdAt DateTime     @default(now())
   usages    MediaUsage[]
