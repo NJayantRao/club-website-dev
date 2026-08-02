@@ -9,6 +9,7 @@ export async function GET() {
         success: true,
         isOpen: status.isOpen,
         opensAt: status.opensAt,
+        eventId: status.eventId,
       },
       { status: 200 }
     );
@@ -16,7 +17,7 @@ export async function GET() {
     console.error("Failed to fetch recruitment status:", error);
 
     return Response.json(
-      { success: false, isOpen: false, opensAt: null },
+      { success: false, isOpen: false, opensAt: null, eventId: null },
       { status: 500 }
     );
   }

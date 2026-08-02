@@ -66,6 +66,7 @@ export function useRecruitmentList(params: FetchParams = {}) {
 interface RecruitmentStatus {
   isOpen: boolean;
   opensAt: string | null;
+  eventId: string | null;
 }
 
 export function useRecruitmentStatus() {
@@ -82,13 +83,14 @@ export function useRecruitmentStatus() {
           setStatus({
             isOpen: Boolean(data.isOpen),
             opensAt: data.opensAt ?? null,
+            eventId: data.eventId ?? null,
           });
         }
       })
       .catch(() => {
         // Fail closed on the client too.
         if (mounted) {
-          setStatus({ isOpen: false, opensAt: null });
+          setStatus({ isOpen: false, opensAt: null, eventId: null });
         }
       })
       .finally(() => {

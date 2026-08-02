@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { z } from "zod";
 import {
   Send,
@@ -12,7 +13,11 @@ import {
   Phone,
   CheckCircle2,
 } from "lucide-react";
-import { useSubmitRecruitment } from "@/hooks/useRecruitments";
+import {
+  useRecruitmentStatus,
+  useSubmitRecruitment,
+} from "@/hooks/useRecruitments";
+import { type EventFormField } from "@prisma/client";
 
 const recruitmentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -59,7 +64,12 @@ const Recruitment = () => {
     loading: isPending,
     error: hookError,
   } = useSubmitRecruitment();
+  const { status: recruitmentStatus } = useRecruitmentStatus();
   const [submitError, setSubmitError] = useState("");
+  const [recruitmentEvent, setRecruitmentEvent] = useState<{
+    id: string;
+    formFields: EventFormField[];
+  } | null>(null);
 
   type FormState = {
     name: string;
@@ -87,13 +97,38 @@ const Recruitment = () => {
     type: "recruitment",
   });
 
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof RecruitmentFormData, string>>
-  >({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (hookError) setSubmitError(hookError.message);
   }, [hookError]);
+
+  useEffect(() => {
+    if (!recruitmentStatus?.eventId) {
+      setRecruitmentEvent(null);
+      return;
+    }
+
+    let mounted = true;
+
+    axios
+      .get(`/api/events/${recruitmentStatus.eventId}`)
+      .then(({ data }) => {
+        if (mounted && data.success) {
+          setRecruitmentEvent(data.event);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setRecruitmentEvent(null);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [recruitmentStatus?.eventId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -102,6 +137,54 @@ const Recruitment = () => {
 
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const handleAnswerChange = (fieldName: string, value: string) => {
+    setAnswers((prev) => ({ ...prev, [fieldName]: value }));
+    setErrors((prev) => ({ ...prev, [fieldName]: "" }));
+  };
+
+  const validateDynamicFields = () => {
+    const nextErrors: Record<string, string> = {};
+
+    for (const field of recruitmentEvent?.formFields ?? []) {
+      const value = answers[field.name]?.trim();
+
+      if (field.required && (!value || value.length === 0)) {
+        nextErrors[field.name] = `${field.label} is required`;
+        continue;
+      }
+
+      if (!value) continue;
+
+      switch (field.type) {
+        case "EMAIL":
+          if (!/^\S+@\S+\.\S+$/.test(value)) {
+            nextErrors[field.name] = `${field.label} must be a valid email`;
+          }
+          break;
+        case "NUMBER":
+          if (!/^\d+$/.test(value)) {
+            nextErrors[field.name] = `${field.label} must be numeric`;
+          }
+          break;
+        case "PHONE":
+          if (!/^\+?[0-9\s-]{7,15}$/.test(value)) {
+            nextErrors[field.name] =
+              `${field.label} must be a valid phone number`;
+          }
+          break;
+        case "URL":
+          if (!/^https?:\/\/\S+/.test(value)) {
+            nextErrors[field.name] = `${field.label} must be a valid URL`;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    return nextErrors;
   };
 
   const onSubmit = async (e?: React.FormEvent) => {
@@ -113,8 +196,7 @@ const Recruitment = () => {
     const result = recruitmentSchema.safeParse(formData as any);
 
     if (!result.success) {
-      const fieldErrors: Partial<Record<keyof RecruitmentFormData, string>> =
-        {};
+      const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
         const field = issue.path[0] as keyof RecruitmentFormData;
         fieldErrors[field] = issue.message;
@@ -123,8 +205,18 @@ const Recruitment = () => {
       return;
     }
 
+    const dynamicErrors = validateDynamicFields();
+    if (Object.keys(dynamicErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...dynamicErrors }));
+      return;
+    }
+
     try {
-      await submitRecruitment(result.data);
+      await submitRecruitment({
+        ...result.data,
+        eventId: recruitmentStatus?.eventId ?? null,
+        answers,
+      });
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
@@ -365,6 +457,68 @@ const Recruitment = () => {
                 <p className="text-red-400 text-xs ml-1">{errors.techStack}</p>
               )}
             </div>
+
+            {recruitmentEvent?.formFields.length ? (
+              <div className="space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">
+                    Additional Details
+                  </h3>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    These questions come from the active recruitment event.
+                  </p>
+                </div>
+
+                {recruitmentEvent.formFields.map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <label className="ml-1 block text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                      {field.label}
+                      {field.required && (
+                        <span className="ml-1 text-red-400">*</span>
+                      )}
+                    </label>
+
+                    {field.type === "TEXTAREA" ? (
+                      <textarea
+                        rows={4}
+                        value={answers[field.name] ?? ""}
+                        onChange={(e) =>
+                          handleAnswerChange(field.name, e.target.value)
+                        }
+                        placeholder={field.placeholder || "Enter answer here"}
+                        className={`w-full rounded-2xl border bg-white/[0.03] px-4 py-4 text-sm text-white outline-none transition ${errors[field.name] ? "border-red-500/50" : "border-white/5 focus:border-blue-500/50"}`}
+                      />
+                    ) : (
+                      <input
+                        type={
+                          field.type === "NUMBER"
+                            ? "number"
+                            : field.type === "EMAIL"
+                              ? "email"
+                              : field.type === "PHONE"
+                                ? "tel"
+                                : field.type === "URL"
+                                  ? "url"
+                                  : "text"
+                        }
+                        value={answers[field.name] ?? ""}
+                        onChange={(e) =>
+                          handleAnswerChange(field.name, e.target.value)
+                        }
+                        placeholder={field.placeholder || "Enter answer here"}
+                        className={`w-full rounded-2xl border bg-white/[0.03] px-4 py-4 text-sm text-white outline-none transition ${errors[field.name] ? "border-red-500/50" : "border-white/5 focus:border-blue-500/50"}`}
+                      />
+                    )}
+
+                    {errors[field.name] && (
+                      <p className="ml-1 text-xs text-red-400">
+                        {errors[field.name]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             <button
               type="submit"
