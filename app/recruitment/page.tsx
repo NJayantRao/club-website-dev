@@ -1,12 +1,17 @@
 import Recruitment from "@/components/Recruitment";
-import React from "react";
+import RecruitmentClosed from "@/components/RecruitmentClosed";
+import getRecruitmentEventStatus from "@/lib/recruitment-status";
 
-const page = () => {
-  return (
-    <>
-      <Recruitment />
-    </>
-  );
+export const dynamic = "force-dynamic";
+
+const Page = async () => {
+  const status = await getRecruitmentEventStatus();
+
+  if (!status.isOpen) {
+    return <RecruitmentClosed opensAt={status.opensAt} />;
+  }
+
+  return <Recruitment />;
 };
 
-export default page;
+export default Page;

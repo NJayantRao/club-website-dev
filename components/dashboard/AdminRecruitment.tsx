@@ -212,6 +212,15 @@ const AdminRecruitment: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-neutral-400">
+        Recruitment open/close is controlled from the{" "}
+        <span className="font-semibold text-white">Events</span> tab — create or
+        edit an event with type <span className="text-white">Recruitment</span>{" "}
+        and set a <span className="text-white">Registration Start</span> date.
+        The public form opens automatically once that date/time is reached (and
+        closes at Registration End, if set).
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-white">

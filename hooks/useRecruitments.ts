@@ -63,6 +63,46 @@ export function useRecruitmentList(params: FetchParams = {}) {
   };
 }
 
+interface RecruitmentStatus {
+  isOpen: boolean;
+  opensAt: string | null;
+}
+
+export function useRecruitmentStatus() {
+  const [status, setStatus] = useState<RecruitmentStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    axios
+      .get("/api/recruitment/status")
+      .then(({ data }) => {
+        if (mounted) {
+          setStatus({
+            isOpen: Boolean(data.isOpen),
+            opensAt: data.opensAt ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        // Fail closed on the client too.
+        if (mounted) {
+          setStatus({ isOpen: false, opensAt: null });
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return { status, loading };
+}
+
 export function useSubmitRecruitment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);

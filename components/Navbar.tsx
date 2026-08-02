@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/public/logo.webp";
 import Image from "next/image";
+import { useRecruitmentStatus } from "@/hooks/useRecruitments";
 
 const Navbar = () => {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const isHomePage = pathname === "/";
+  const { status: recruitmentStatus } = useRecruitmentStatus();
+  const isRecruitmentOpen = recruitmentStatus?.isOpen ?? false;
 
   const menuItems = [
     { name: "Home", path: "/", isLink: true },
@@ -35,7 +38,7 @@ const Navbar = () => {
       id="navigation"
       className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4"
     >
-      <div className="w-full max-w-5xl backdrop-blur-md bg-white/5 border border-white/10 px-6 py-3 rounded-full lg:rounded-full flex items-center justify-between lg:justify-center lg:gap-8 hover-trigger transition-all hover:bg-white/10 shadow-2xl shadow-black/50 relative">
+      <div className="relative inline-flex w-fit max-w-[calc(100vw-2rem)] items-center justify-between lg:justify-center gap-8 rounded-full border border-white/10  bg-white/5 px-8 py-3 backdrop-blur-md shadow-2xl shadow-black/50 transition-all  hover:bg-white/10">
         {/* Logo */}
         <Link
           href="/"
@@ -76,18 +79,14 @@ const Navbar = () => {
 
         {/* Desktop Buttons */}
         <div className="hidden lg:flex items-center gap-3">
-          <Link
-            href="/sign-in"
-            className="text-[11px] font-medium text-neutral-400 hover:text-white transition-colors uppercase tracking-wide px-3"
-          >
-            Admin
-          </Link>
-          <Link
-            href="/recruitment"
-            className="text-[11px] font-semibold bg-white text-black px-4 py-1.5 rounded-full hover:bg-neutral-200 transition-colors hover-trigger"
-          >
-            Join Now
-          </Link>
+          {isRecruitmentOpen && (
+            <Link
+              href="/recruitment"
+              className="text-[11px] font-semibold bg-white text-black px-4 py-1.5 rounded-full hover:bg-neutral-200 transition-colors hover-trigger"
+            >
+              Join Now
+            </Link>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -130,20 +129,15 @@ const Navbar = () => {
                   )
                 )}
                 <div className="flex flex-col gap-3 pt-2">
-                  <Link
-                    href="/sign-in"
-                    onClick={() => setIsOpen(false)}
-                    className="text-sm font-medium text-neutral-400 hover:text-white transition-colors uppercase tracking-widest"
-                  >
-                    Admin Dashboard
-                  </Link>
-                  <Link
-                    href="/recruitment"
-                    onClick={() => setIsOpen(false)}
-                    className="w-full text-center text-sm font-semibold bg-white text-black py-3 rounded-xl hover:bg-neutral-200 transition-colors"
-                  >
-                    Join Now
-                  </Link>
+                  {isRecruitmentOpen && (
+                    <Link
+                      href="/recruitment"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full text-center text-sm font-semibold bg-white text-black py-3 rounded-xl hover:bg-neutral-200 transition-colors"
+                    >
+                      Join Now
+                    </Link>
+                  )}
                 </div>
               </div>
             </motion.div>
