@@ -52,9 +52,12 @@ export async function POST(request: NextRequest) {
     // transaction, so there's no point holding a DB connection open while
     // waiting on it.
     let imageUrl: string | null = null;
+    let imagePublicId: string | null = null;
 
     if (image && image.size > 0) {
-      imageUrl = await uploadImageToCloudinary(image, "club-members");
+      const uploaded = await uploadImageToCloudinary(image, "club-members");
+      imageUrl = uploaded.url;
+      imagePublicId = uploaded.publicId;
     }
 
     const member = await prisma.$transaction(async (tx) => {
@@ -71,7 +74,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (imageUrl) {
-        await attachMedia(MediaUsageType.PROFILE, created.id, imageUrl, tx);
+        await attachMedia(
+          MediaUsageType.PROFILE,
+          created.id,
+          imageUrl,
+          imagePublicId,
+          tx
+        );
       }
 
       return created;

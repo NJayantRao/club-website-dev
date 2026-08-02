@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
+import Popup from "./Popup";
 
 interface EventSettingsProps {
   id: string;
@@ -67,17 +68,12 @@ const EventSettings = ({ id }: EventSettingsProps) => {
     }
   }
 
-  function handleManageAttendance() {
-    router.push(`/dashboard/events/${id}/attendance`);
+  async function handleDelete() {
+    setShowConfirm(true);
   }
 
-  async function handleDelete() {
-    const confirmed = window.confirm(
-      "This will permanently delete this event and cannot be undone. Are you sure?"
-    );
-
-    if (!confirmed) return;
-
+  async function performDelete() {
+    setShowConfirm(false);
     setDeleting(true);
 
     try {
@@ -92,6 +88,8 @@ const EventSettings = ({ id }: EventSettingsProps) => {
       setDeleting(false);
     }
   }
+
+  const [showConfirm, setShowConfirm] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -150,6 +148,16 @@ const EventSettings = ({ id }: EventSettingsProps) => {
           </div>
         </div>
       </div>
+      <Popup
+        show={showConfirm}
+        type="confirm"
+        message="This will permanently delete this event and cannot be undone. Are you sure?"
+        onClose={() => setShowConfirm(false)}
+        onConfirm={performDelete}
+        isConfirm={true}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 };

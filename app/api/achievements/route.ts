@@ -67,9 +67,15 @@ export async function POST(request: NextRequest) {
     // }
 
     let imageUrl: string | null = null;
+    let imagePublicId: string | null = null;
 
     if (image && image.size > 0) {
-      imageUrl = await uploadImageToCloudinary(image, "club-achievements");
+      const uploaded = await uploadImageToCloudinary(
+        image,
+        "club-achievements"
+      );
+      imageUrl = uploaded.url;
+      imagePublicId = uploaded.publicId;
     }
 
     const achievement = await prisma.$transaction(async (tx) => {
@@ -88,7 +94,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (imageUrl) {
-        await attachMedia(MediaUsageType.ACHIEVEMENT, created.id, imageUrl, tx);
+        await attachMedia(
+          MediaUsageType.ACHIEVEMENT,
+          created.id,
+          imageUrl,
+          imagePublicId,
+          tx
+        );
       }
 
       return created;

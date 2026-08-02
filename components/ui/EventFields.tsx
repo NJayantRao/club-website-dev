@@ -9,6 +9,8 @@ import Popup from "./Popup";
 
 interface Props {
   id: string;
+  title?: string;
+  emptyMessage?: string;
 }
 
 interface EventFormField {
@@ -30,7 +32,11 @@ interface FieldValues {
   placeholder: string;
 }
 
-export default function EventFields({ id }: Props) {
+export default function EventFields({
+  id,
+  title = "Registration Form",
+  emptyMessage = "No registration fields yet. Add one to start building the form.",
+}: Props) {
   const [fields, setFields] = useState<EventFormField[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -148,7 +154,7 @@ export default function EventFields({ id }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">Registration Form</h2>
+        <h2 className="text-xl font-semibold text-white">{title}</h2>
 
         <button
           onClick={openAdd}
@@ -163,7 +169,7 @@ export default function EventFields({ id }: Props) {
       <div className="space-y-3">
         {fields.length === 0 && (
           <p className="rounded-2xl border border-dashed border-white/10 py-16 text-center text-neutral-500">
-            No registration fields yet. Add one to start building the form.
+            {emptyMessage}
           </p>
         )}
 

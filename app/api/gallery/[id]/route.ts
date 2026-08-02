@@ -4,6 +4,7 @@ import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { MediaUsageType } from "@prisma/client";
 import { revalidateTag } from "next/cache";
+import { attachMedia, removeMedia } from "@/lib/media";
 
 export async function PATCH(
   request: NextRequest,
@@ -57,25 +58,21 @@ export async function PATCH(
     }
 
     if (photos.length) {
-      const uploadedUrls = await Promise.all(
+      const uploadedPhotos = await Promise.all(
         photos.map((photo) => uploadImageToCloudinary(photo, "gallery"))
       );
 
-      await prisma.$transaction(
-        uploadedUrls.map((url) =>
-          prisma.media.create({
-            data: {
-              url,
-              usages: {
-                create: {
-                  type: MediaUsageType.GALLERY,
-                  entityId: id,
-                },
-              },
-            },
-          })
-        )
-      );
+      await prisma.$transaction(async (tx) => {
+        for (const { url, publicId } of uploadedPhotos) {
+          await attachMedia(
+            MediaUsageType.GALLERY,
+            id,
+            url,
+            publicId,
+            tx as any
+          );
+        }
+      });
     }
 
     revalidateTag("gallery", "max");
@@ -137,24 +134,13 @@ export async function DELETE(
       );
     }
 
-    const usages = await prisma.mediaUsage.findMany({
-      where: {
-        type: MediaUsageType.GALLERY,
-        entityId: id,
-      },
-      select: { mediaId: true },
-    });
+    await prisma.$transaction(async (tx) => {
+      await removeMedia(MediaUsageType.GALLERY, id, tx);
 
-    const mediaIds = usages.map((usage) => usage.mediaId);
-
-    await prisma.$transaction([
-      prisma.media.deleteMany({
-        where: { id: { in: mediaIds } },
-      }),
-      prisma.galleryAlbum.delete({
+      await tx.galleryAlbum.delete({
         where: { id },
-      }),
-    ]);
+      });
+    });
 
     revalidateTag("gallery", "max");
 

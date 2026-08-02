@@ -29,7 +29,7 @@ const seedMembers = async () => {
     for (const member of members) {
       const { imageUrl: localImagePath, ...memberData } = member;
 
-      const imageUrl = await uploadLocalImageToCloudinary(
+      const { url: imageUrl, publicId } = await uploadLocalImageToCloudinary(
         localImagePath.replace("/members/", "members/"),
         "club-members"
       );
@@ -42,6 +42,7 @@ const seedMembers = async () => {
         await tx.media.create({
           data: {
             url: imageUrl,
+            publicId,
             usages: {
               create: {
                 type: MediaUsageType.PROFILE,
