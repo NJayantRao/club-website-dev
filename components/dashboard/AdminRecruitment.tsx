@@ -20,6 +20,7 @@ import {
   PencilLine,
   Clock3,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 
 import axios from "axios";
@@ -58,6 +59,20 @@ export default function AdminRecruitment() {
     isConfirm: false,
     onConfirm: () => {},
   });
+  const [actionProcessing, setActionProcessing] = useState(false);
+
+  const isEventOpen = useMemo(() => {
+    if (!recruitmentEvent) return false;
+    const now = new Date();
+    if (recruitmentEvent.registrationStart) {
+      const started = now >= new Date(recruitmentEvent.registrationStart);
+      const notEnded =
+        !recruitmentEvent.registrationEnd ||
+        now <= new Date(recruitmentEvent.registrationEnd);
+      return started && notEnded;
+    }
+    return recruitmentEvent.status === "ONGOING";
+  }, [recruitmentEvent]);
 
   const fetchRecruits = async (pageNum = 1) => {
     setLoading(true);
@@ -191,17 +206,12 @@ export default function AdminRecruitment() {
   const openRegistrationNow = async () => {
     if (!recruitmentEvent) return;
     try {
-      const now = new Date().toISOString().slice(0, 16);
+      setActionProcessing(true);
+      const now = new Date().toISOString();
       const fd = new FormData();
       fd.append("registrationStart", now);
-      fd.append(
-        "registrationEnd",
-        recruitmentEvent.registrationEnd
-          ? new Date(recruitmentEvent.registrationEnd)
-              .toISOString()
-              .slice(0, 16)
-          : ""
-      );
+      // clear any existing registrationEnd so reopening makes the event active
+      fd.append("registrationEnd", "");
       await axios({
         url: `/api/events/${recruitmentEvent.id}`,
         method: "PATCH",
@@ -226,13 +236,16 @@ export default function AdminRecruitment() {
         isConfirm: false,
         onConfirm: () => {},
       });
+    } finally {
+      setActionProcessing(false);
     }
   };
 
   const closeRegistrationNow = async () => {
     if (!recruitmentEvent) return;
     try {
-      const now = new Date().toISOString().slice(0, 16);
+      setActionProcessing(true);
+      const now = new Date().toISOString();
       const fd = new FormData();
       fd.append("registrationEnd", now);
       await axios({
@@ -259,6 +272,8 @@ export default function AdminRecruitment() {
         isConfirm: false,
         onConfirm: () => {},
       });
+    } finally {
+      setActionProcessing(false);
     }
   };
 
@@ -389,15 +404,25 @@ export default function AdminRecruitment() {
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={openRegistrationNow}
-                    className="rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"
+                    disabled={actionProcessing || isEventOpen}
+                    className={`rounded-2xl px-3 py-2 text-sm font-semibold text-white ${actionProcessing || isEventOpen ? "opacity-60 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
                   >
-                    Open
+                    {actionProcessing ? (
+                      <Loader2 className="inline-block h-4 w-4 animate-spin" />
+                    ) : (
+                      "Open"
+                    )}
                   </button>
                   <button
                     onClick={closeRegistrationNow}
-                    className="rounded-2xl bg-yellow-600 px-3 py-2 text-sm font-semibold text-white"
+                    disabled={actionProcessing || !isEventOpen}
+                    className={`rounded-2xl px-3 py-2 text-sm font-semibold text-white ${actionProcessing || !isEventOpen ? "opacity-60 cursor-not-allowed" : "bg-yellow-600 hover:bg-yellow-700"}`}
                   >
-                    Close
+                    {actionProcessing ? (
+                      <Loader2 className="inline-block h-4 w-4 animate-spin" />
+                    ) : (
+                      "Close"
+                    )}
                   </button>
                   <button
                     onClick={confirmDeleteEvent}
