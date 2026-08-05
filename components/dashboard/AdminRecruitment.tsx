@@ -21,6 +21,7 @@ import {
   Clock3,
   ArrowRight,
   Loader2,
+  Pencil,
 } from "lucide-react";
 
 import axios from "axios";
@@ -28,7 +29,11 @@ import { useRouter } from "next/navigation";
 
 import Popup from "../ui/Popup";
 import EventFields from "../ui/EventFields";
+
 import { Pagination } from "@/components/ui/Pagination";
+import EditRecruitmentModal, {
+  RecruitmentFormData,
+} from "../ui/EditRequirementModal";
 
 const LIMIT = 12;
 
@@ -60,6 +65,9 @@ export default function AdminRecruitment() {
     onConfirm: () => {},
   });
   const [actionProcessing, setActionProcessing] = useState(false);
+
+  const [editingRecruit, setEditingRecruit] = useState<any | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const isEventOpen = useMemo(() => {
     if (!recruitmentEvent) return false;
@@ -149,6 +157,26 @@ export default function AdminRecruitment() {
         isConfirm: false,
         onConfirm: () => {},
       });
+    }
+  };
+
+  const saveRecruitmentEdit = async (id: string, data: RecruitmentFormData) => {
+    setIsSavingEdit(true);
+    try {
+      await axios.put(`/api/recruitment/${id}`, data);
+      setEditingRecruit(null);
+      fetchRecruits(page);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to save changes.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -600,6 +628,16 @@ export default function AdminRecruitment() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            setEditingRecruit(r);
+                          }}
+                          className="rounded-xl border border-white/10 p-3 text-neutral-300 hover:bg-white/10"
+                          aria-label={`Edit application from ${r.name}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setPopup({
                               show: true,
                               type: "success",
@@ -707,6 +745,15 @@ export default function AdminRecruitment() {
         onConfirm={popup.onConfirm}
         onClose={() => setPopup((p) => ({ ...p, show: false }))}
       />
+
+      {editingRecruit && (
+        <EditRecruitmentModal
+          record={editingRecruit}
+          isSaving={isSavingEdit}
+          onClose={() => setEditingRecruit(null)}
+          onSave={saveRecruitmentEdit}
+        />
+      )}
     </div>
   );
 }

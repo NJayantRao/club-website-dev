@@ -1,9 +1,18 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, ChevronDown, Mail, Phone, Search, Inbox } from "lucide-react";
+import {
+  Trash2,
+  ChevronDown,
+  Mail,
+  Phone,
+  Search,
+  Inbox,
+  Pencil,
+} from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
+import EditInquiryModal, { ContactInquiryRecord } from "../ui/EditInquiryModal";
 import axios from "axios";
 
 const LIMIT = 15;
@@ -14,6 +23,7 @@ interface ContactQuery {
   email: string;
   phoneNo: string;
   message: string;
+  status: "PENDING" | "READ" | "RESOLVED";
   createdAt: string;
 }
 
@@ -40,6 +50,10 @@ const AdminQueries: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [editingQuery, setEditingQuery] = useState<ContactInquiryRecord | null>(
+    null
+  );
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [popup, setPopup] = useState({
     show: false,
     type: "success" as const,
@@ -94,6 +108,29 @@ const AdminQueries: React.FC = () => {
         }
       },
     });
+
+  const saveQueryEdit = async (
+    id: string,
+    data: Omit<ContactInquiryRecord, "id">
+  ) => {
+    setIsSavingEdit(true);
+    try {
+      await axios.patch(`/api/contact-us/${id}`, data);
+      setEditingQuery(null);
+      fetchQueries(page);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to save changes.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const visibleQueries = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -190,6 +227,17 @@ const AdminQueries: React.FC = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        setEditingQuery(q);
+                      }}
+                      className="rounded-lg p-2 text-neutral-300 transition-all hover:bg-white/10"
+                      aria-label={`Edit query from ${q.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         confirmDeleteQuery(q.id, q.name);
                       }}
                       className="rounded-lg p-2 text-red-400 transition-all hover:bg-red-400/10"
@@ -261,6 +309,15 @@ const AdminQueries: React.FC = () => {
         onConfirm={popup.onConfirm}
         onClose={() => setPopup((p) => ({ ...p, show: false }))}
       />
+
+      {editingQuery && (
+        <EditInquiryModal
+          record={editingQuery}
+          isSaving={isSavingEdit}
+          onClose={() => setEditingQuery(null)}
+          onSave={saveQueryEdit}
+        />
+      )}
     </div>
   );
 };

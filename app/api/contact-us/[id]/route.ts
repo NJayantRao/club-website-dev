@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { ContactInquiryStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { revalidateTag } from "next/cache";
@@ -88,13 +89,69 @@ export async function PATCH(
       );
     }
 
-    const { status } = await request.json();
+    const body = await request.json();
+    const { status, name, email, phoneNo, message } = body;
 
-    if (!status) {
+    const data: {
+      status?: ContactInquiryStatus;
+      name?: string;
+      email?: string;
+      phoneNo?: string;
+      message?: string;
+    } = {};
+
+    if (status !== undefined) {
+      if (!Object.values(ContactInquiryStatus).includes(status)) {
+        return Response.json(
+          { success: false, message: "Invalid status value" },
+          { status: 400 }
+        );
+      }
+      data.status = status;
+    }
+
+    if (name !== undefined) {
+      const trimmed = String(name).trim();
+      if (!trimmed) {
+        return Response.json(
+          { success: false, message: "Name cannot be empty" },
+          { status: 400 }
+        );
+      }
+      data.name = trimmed;
+    }
+
+    if (email !== undefined) {
+      const trimmed = String(email).trim();
+      if (!trimmed || !/^\S+@\S+\.\S+$/.test(trimmed)) {
+        return Response.json(
+          { success: false, message: "Email must be a valid email" },
+          { status: 400 }
+        );
+      }
+      data.email = trimmed;
+    }
+
+    if (phoneNo !== undefined) {
+      data.phoneNo = String(phoneNo).trim();
+    }
+
+    if (message !== undefined) {
+      const trimmed = String(message).trim();
+      if (!trimmed) {
+        return Response.json(
+          { success: false, message: "Message cannot be empty" },
+          { status: 400 }
+        );
+      }
+      data.message = trimmed;
+    }
+
+    if (Object.keys(data).length === 0) {
       return Response.json(
         {
           success: false,
-          message: "Status is required",
+          message: "No fields to update",
         },
         { status: 400 }
       );
@@ -104,9 +161,7 @@ export async function PATCH(
       where: {
         id,
       },
-      data: {
-        status,
-      },
+      data,
     });
 
     revalidateTag("contact-us", "max");
@@ -115,6 +170,7 @@ export async function PATCH(
       {
         success: true,
         message: "Contact inquiry updated successfully",
+        inquiry: updatedInquiry,
         status: updatedInquiry.status,
       },
       {

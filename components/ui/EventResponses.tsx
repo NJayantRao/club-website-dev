@@ -14,17 +14,16 @@ import {
   Phone,
   GraduationCap,
   Inbox,
+  Pencil,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "./Popup";
+import EditResponseModal, {
+  EventFormFieldLite as EditableFormField,
+} from "./EditResponseModal";
 
 interface EventResponsesProps {
   id: string;
-}
-
-interface EventFormFieldLite {
-  name: string;
-  label: string;
 }
 
 interface EventResponseItem {
@@ -62,11 +61,14 @@ const EventResponses = ({ id }: EventResponsesProps) => {
   const [page, setPage] = useState(1);
   const [responses, setResponses] = useState<EventResponseItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [formFields, setFormFields] = useState<EventFormFieldLite[]>([]);
+  const [formFields, setFormFields] = useState<EditableFormField[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<AttendanceFilter>("all");
+  const [editingResponse, setEditingResponse] =
+    useState<EventResponseItem | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [popup, setPopup] = useState({
     show: false,
@@ -109,6 +111,36 @@ const EventResponses = ({ id }: EventResponsesProps) => {
       await load(page);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const saveResponseEdit = async (
+    responseId: string,
+    updates: {
+      name: string;
+      email: string;
+      phone: string | null;
+      college: string | null;
+      attendance: boolean;
+      answers: Record<string, string>;
+    }
+  ) => {
+    setIsSavingEdit(true);
+    try {
+      await axios.patch(`/api/events/${id}/responses/${responseId}`, updates);
+      setEditingResponse(null);
+      await load(page);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to save changes.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -298,6 +330,17 @@ const EventResponses = ({ id }: EventResponsesProps) => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        setEditingResponse(response);
+                      }}
+                      className="rounded-lg p-2 text-neutral-300 transition-all hover:bg-white/10"
+                      aria-label={`Edit response from ${response.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         confirmDelete(response);
                       }}
                       className="rounded-lg p-2 text-red-400 transition-all hover:bg-red-400/10"
@@ -406,6 +449,16 @@ const EventResponses = ({ id }: EventResponsesProps) => {
         onConfirm={popup.onConfirm}
         onClose={() => setPopup((p) => ({ ...p, show: false }))}
       />
+
+      {editingResponse && (
+        <EditResponseModal
+          record={editingResponse}
+          formFields={formFields}
+          isSaving={isSavingEdit}
+          onClose={() => setEditingResponse(null)}
+          onSave={saveResponseEdit}
+        />
+      )}
     </div>
   );
 };
