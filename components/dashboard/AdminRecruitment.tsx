@@ -68,7 +68,7 @@ export default function AdminRecruitment() {
     setIsLoading(true);
 
     try {
-      const { data } = await axios.get("/api/recruitment-drives", {
+      const { data } = await axios.get("/api/recruitment", {
         params: {
           page: pageNum,
           limit: LIMIT,
@@ -94,7 +94,7 @@ export default function AdminRecruitment() {
     setIsCreating(true);
 
     try {
-      await axios.post("/api/recruitment-drives", data);
+      await axios.post("/api/recruitment", data);
       setShowCreateModal(false);
       fetchDrives(1);
       setPage(1);
@@ -114,7 +114,7 @@ export default function AdminRecruitment() {
 
   const deleteDrive = async (drive: RecruitmentDrive) => {
     try {
-      await axios.delete(`/api/recruitment-drives/${drive.id}`);
+      await axios.delete(`/api/recruitment/${drive.id}`);
       fetchDrives(page);
     } catch (err) {
       console.error(err);
@@ -148,7 +148,7 @@ export default function AdminRecruitment() {
     setTogglingId(drive.id);
 
     try {
-      await axios.patch(`/api/recruitment-drives/${drive.id}`, { status });
+      await axios.patch(`/api/recruitment/${drive.id}`, { status });
       await fetchDrives(page);
     } catch (err: any) {
       const message =

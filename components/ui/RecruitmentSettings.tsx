@@ -57,7 +57,7 @@ const RecruitmentSettings = ({ id }: RecruitmentSettingsProps) => {
     setLoading(true);
 
     try {
-      const { data } = await axios.get(`/api/recruitment-drives/${id}`);
+      const { data } = await axios.get(`/api/recruitment/${id}`);
 
       const d = data.drive;
       setForm({
@@ -89,7 +89,7 @@ const RecruitmentSettings = ({ id }: RecruitmentSettingsProps) => {
     setTogglingRegistration(true);
 
     try {
-      await axios.patch(`/api/recruitment-drives/${id}`, { status });
+      await axios.patch(`/api/recruitment/${id}`, { status });
       await fetchDrive();
 
       setPopup({
@@ -125,7 +125,7 @@ const RecruitmentSettings = ({ id }: RecruitmentSettingsProps) => {
     setSaving(true);
 
     try {
-      await axios.patch(`/api/recruitment-drives/${id}`, form);
+      await axios.patch(`/api/recruitment/${id}`, form);
       await fetchDrive();
 
       setPopup({
@@ -156,7 +156,7 @@ const RecruitmentSettings = ({ id }: RecruitmentSettingsProps) => {
     setDeleting(true);
 
     try {
-      await axios.delete(`/api/recruitment-drives/${id}`);
+      await axios.delete(`/api/recruitment/${id}`);
 
       router.push("/dashboard?tab=recruitment");
     } catch (error) {
