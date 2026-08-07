@@ -13,27 +13,43 @@ import {
   Phone,
   CheckCircle2,
 } from "lucide-react";
-import {
-  useRecruitmentStatus,
-  useSubmitRecruitment,
-} from "@/hooks/useRecruitments";
-import { type EventFormField } from "@prisma/client";
+import { useSubmitRecruitment } from "@/hooks/useRecruitments";
 
+interface DriveFormField {
+  id: string;
+  name: string;
+  label: string;
+  type: "TEXT" | "TEXTAREA" | "URL" | "NUMBER" | "EMAIL" | "PHONE" | "FILE";
+  required: boolean;
+  placeholder: string | null;
+}
+
+interface DriveData {
+  id: string;
+  title: string;
+  formFields: DriveFormField[];
+}
+
+// These are the fixed, always-required fields every application must
+// have. Anything a specific drive wants beyond this comes through that
+// drive's own configurable formFields instead (rendered as "Additional
+// Details" below).
 const recruitmentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  rollNo: z.string().min(1, "Roll number is required"),
-  instituteEmail: z.string().email("Enter a valid institute email"),
-  personalEmail: z.string().email("Enter a valid personal email"),
-  gender: z.enum(["male", "female", "other"], {
+  rollNumber: z.string().min(1, "Roll number is required"),
+  registrationNo: z.string().min(1, "Registration number is required"),
+  gender: z.enum(["MALE", "FEMALE"], {
     error: "Please select a gender",
   }),
+  nistEmail: z.string().email("Enter a valid NIST email"),
+  personalEmail: z.string().email("Enter a valid personal email"),
   branch: z.string().min(1, "Branch is required"),
-  phoneNo: z.string().min(10, "Enter a valid phone number").max(15),
-  locality: z.enum(["localite", "hostelite"], {
+  hackerrankId: z.string().min(1, "HackerRank ID is required"),
+  phoneNumber: z.string().min(10, "Enter a valid phone number").max(15),
+  locality: z.enum(["LOCALITE", "HOSTELITE"], {
     error: "Please select locality",
   }),
-  techStack: z.string().min(3, "Please describe your tech stack"),
-  type: z.literal("recruitment"),
+  techStack: z.string().min(3, "Please describe your target tech stack"),
 });
 
 type RecruitmentFormData = z.infer<typeof recruitmentSchema>;
@@ -56,45 +72,34 @@ const InputField = ({ label, icon: Icon, error, ...props }: any) => (
   </div>
 );
 
-const Recruitment = () => {
+interface RecruitmentProps {
+  driveId: string;
+}
+
+const Recruitment = ({ driveId }: RecruitmentProps) => {
   const [whatsappLink, setWhatsappLink] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const {
     submitRecruitment,
     loading: isPending,
     error: hookError,
-  } = useSubmitRecruitment();
-  const { status: recruitmentStatus } = useRecruitmentStatus();
+  } = useSubmitRecruitment(driveId);
   const [submitError, setSubmitError] = useState("");
-  const [recruitmentEvent, setRecruitmentEvent] = useState<{
-    id: string;
-    formFields: EventFormField[];
-  } | null>(null);
+  const [drive, setDrive] = useState<DriveData | null>(null);
+  console.log(drive);
 
-  type FormState = {
-    name: string;
-    rollNo: string;
-    instituteEmail: string;
-    personalEmail: string;
-    gender: string;
-    branch: string;
-    phoneNo: string;
-    locality: "localite" | "hostelite";
-    techStack: string;
-    type: "recruitment";
-  };
-
-  const [formData, setFormData] = useState<FormState>({
+  const [formData, setFormData] = useState<RecruitmentFormData>({
     name: "",
-    rollNo: "",
-    instituteEmail: "",
+    rollNumber: "",
+    registrationNo: "",
+    gender: "MALE",
+    nistEmail: "",
     personalEmail: "",
-    gender: "",
     branch: "",
-    phoneNo: "",
-    locality: "hostelite",
+    hackerrankId: "",
+    phoneNumber: "",
+    locality: "HOSTELITE",
     techStack: "",
-    type: "recruitment",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,30 +110,28 @@ const Recruitment = () => {
   }, [hookError]);
 
   useEffect(() => {
-    if (!recruitmentStatus?.eventId) {
-      setRecruitmentEvent(null);
+    if (!driveId) {
+      setDrive(null);
       return;
     }
 
     let mounted = true;
 
     axios
-      .get(`/api/events/${recruitmentStatus.eventId}`)
+      .get(`/api/recruitment/${driveId}`)
       .then(({ data }) => {
         if (mounted && data.success) {
-          setRecruitmentEvent(data.event);
+          setDrive(data.drive);
         }
       })
       .catch(() => {
-        if (mounted) {
-          setRecruitmentEvent(null);
-        }
+        if (mounted) setDrive(null);
       });
 
     return () => {
       mounted = false;
     };
-  }, [recruitmentStatus?.eventId]);
+  }, [driveId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -147,7 +150,7 @@ const Recruitment = () => {
   const validateDynamicFields = () => {
     const nextErrors: Record<string, string> = {};
 
-    for (const field of recruitmentEvent?.formFields ?? []) {
+    for (const field of drive?.formFields ?? []) {
       const value = answers[field.name]?.trim();
 
       if (field.required && (!value || value.length === 0)) {
@@ -193,7 +196,7 @@ const Recruitment = () => {
     setErrors({});
     setSubmitError("");
 
-    const result = recruitmentSchema.safeParse(formData as any);
+    const result = recruitmentSchema.safeParse(formData);
 
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -214,7 +217,6 @@ const Recruitment = () => {
     try {
       await submitRecruitment({
         ...result.data,
-        eventId: recruitmentStatus?.eventId ?? null,
         answers,
       });
       setSubmitted(true);
@@ -269,7 +271,8 @@ const Recruitment = () => {
               <span className="text-blue-500">Up</span>
             </h1>
             <p className="text-neutral-400 max-w-md text-lg font-light leading-relaxed">
-              Join Club Excel and be part of the most elite tech community.
+              Join Club Excel and be part of the most elite tech community. Fill
+              out the application to start your journey.
             </p>
           </div>
           <div className="space-y-6 pt-8">
@@ -335,45 +338,32 @@ const Recruitment = () => {
               <InputField
                 label="Roll Number"
                 icon={Hash}
-                name="rollNo"
+                name="rollNumber"
                 type="text"
                 placeholder="e.g. 23XXXX"
-                error={errors.rollNo}
-                value={formData.rollNo}
+                error={errors.rollNumber}
+                value={formData.rollNumber}
                 onChange={handleChange}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputField
-                label="Institute Email"
-                icon={Mail}
-                name="instituteEmail"
-                type="email"
-                placeholder="...@nist.edu"
-                error={errors.instituteEmail}
-                value={formData.instituteEmail}
+                label="Registration No"
+                icon={Hash}
+                name="registrationNo"
+                type="text"
+                placeholder="e.g. 230110XXX"
+                error={errors.registrationNo}
+                value={formData.registrationNo}
                 onChange={handleChange}
               />
-              <InputField
-                label="Personal Email"
-                icon={Mail}
-                name="personalEmail"
-                type="email"
-                placeholder="your@email.com"
-                error={errors.personalEmail}
-                value={formData.personalEmail}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black ml-1">
                   Gender
                 </label>
                 <div className="flex gap-3">
-                  {(["male", "female", "other"] as const).map((g) => (
+                  {(["MALE", "FEMALE"] as const).map((g) => (
                     <button
                       key={g}
                       type="button"
@@ -390,7 +380,32 @@ const Recruitment = () => {
                   <p className="text-red-400 text-xs ml-1">{errors.gender}</p>
                 )}
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <InputField
+                label="NIST Email"
+                icon={Mail}
+                name="nistEmail"
+                type="email"
+                placeholder="...@nist.edu"
+                error={errors.nistEmail}
+                value={formData.nistEmail}
+                onChange={handleChange}
+              />
+              <InputField
+                label="Personal Email"
+                icon={Mail}
+                name="personalEmail"
+                type="email"
+                placeholder="your@email.com"
+                error={errors.personalEmail}
+                value={formData.personalEmail}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputField
                 label="Branch"
                 icon={BookOpen}
@@ -401,17 +416,27 @@ const Recruitment = () => {
                 value={formData.branch}
                 onChange={handleChange}
               />
+              <InputField
+                label="HackerRank ID"
+                icon={Code}
+                name="hackerrankId"
+                type="text"
+                placeholder="Username"
+                error={errors.hackerrankId}
+                value={formData.hackerrankId}
+                onChange={handleChange}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <InputField
                 label="Phone Number"
                 icon={Phone}
-                name="phoneNo"
+                name="phoneNumber"
                 type="tel"
                 placeholder="+91..."
-                error={errors.phoneNo}
-                value={formData.phoneNo}
+                error={errors.phoneNumber}
+                value={formData.phoneNumber}
                 onChange={handleChange}
               />
               <div className="space-y-2">
@@ -419,7 +444,7 @@ const Recruitment = () => {
                   Locality
                 </label>
                 <div className="flex gap-4">
-                  {(["localite", "hostelite"] as const).map((l) => (
+                  {(["LOCALITE", "HOSTELITE"] as const).map((l) => (
                     <button
                       key={l}
                       type="button"
@@ -440,7 +465,7 @@ const Recruitment = () => {
 
             <div className="space-y-2">
               <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black ml-1">
-                Tech Stack
+                Target Tech Stack
               </label>
               <div className="relative">
                 <Code className="absolute left-4 top-5 w-4 h-4 text-neutral-600" />
@@ -458,18 +483,18 @@ const Recruitment = () => {
               )}
             </div>
 
-            {recruitmentEvent?.formFields.length ? (
+            {drive?.formFields?.length ? (
               <div className="space-y-5 rounded-[2rem] border border-white/10 bg-white/[0.03] p-6">
                 <div>
                   <h3 className="text-lg font-semibold text-white">
                     Additional Details
                   </h3>
                   <p className="mt-1 text-sm text-neutral-500">
-                    These questions come from the active recruitment event.
+                    These questions come from this recruitment drive.
                   </p>
                 </div>
 
-                {recruitmentEvent.formFields.map((field) => (
+                {drive.formFields.map((field) => (
                   <div key={field.id} className="space-y-2">
                     <label className="ml-1 block text-[10px] font-black uppercase tracking-widest text-neutral-500">
                       {field.label}

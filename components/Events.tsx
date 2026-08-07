@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 import { EventItem } from "@/lib/events";
-import { EventStatusType, EventType } from "@prisma/client";
+import { EventStatusType } from "@prisma/client";
 import ImageCarousel from "./ui/Imagecarousal";
 
 interface EventsProps {
@@ -24,10 +24,7 @@ interface EventsProps {
 const statusLabel = (status: EventStatusType) =>
   status.charAt(0) + status.slice(1).toLowerCase();
 
-const registerHref = (event: EventItem) =>
-  event.type === EventType.RECRUITMENT
-    ? "/recruitment"
-    : `/events/${event.id}/register`;
+const registerHref = (event: EventItem) => `/events/${event.id}/register`;
 
 const EventDetailsModal = ({
   event,

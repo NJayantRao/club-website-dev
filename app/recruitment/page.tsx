@@ -1,17 +1,17 @@
 import Recruitment from "@/components/Recruitment";
 import RecruitmentClosed from "@/components/RecruitmentClosed";
-import getRecruitmentEventStatus from "@/lib/recruitment-status";
+import getRecruitmentDriveStatus from "@/lib/recruitment-status";
 
 export const dynamic = "force-dynamic";
 
 const Page = async () => {
-  const status = await getRecruitmentEventStatus();
+  const status = await getRecruitmentDriveStatus();
 
-  if (!status.isOpen) {
+  if (!status.isOpen || !status.driveId) {
     return <RecruitmentClosed opensAt={status.opensAt} />;
   }
 
-  return <Recruitment />;
+  return <Recruitment driveId={status.driveId} />;
 };
 
 export default Page;

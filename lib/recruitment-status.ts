@@ -1,29 +1,31 @@
 import prisma from "@/lib/prisma";
-import { EventStatusType, EventType } from "@prisma/client";
+import { RecruitmentDriveStatus } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 
 export interface RecruitmentStatus {
   isOpen: boolean;
   opensAt: Date | null;
-  eventId: string | null;
+  driveId: string | null;
 }
 
-const getRecruitmentEventStatus = unstable_cache(
+const getRecruitmentDriveStatus = unstable_cache(
   async (): Promise<RecruitmentStatus> => {
     const now = new Date();
 
-    const drives = await prisma.event.findMany({
+    const drives = await prisma.recruitmentDrive.findMany({
       where: {
-        type: EventType.RECRUITMENT,
-        status: { not: EventStatusType.CANCELED },
+        status: { not: RecruitmentDriveStatus.CLOSED },
       },
       select: {
         id: true,
         status: true,
-        startAt: true,
         registrationStart: true,
         registrationEnd: true,
       },
+      // Most recently created first, so if more than one drive is
+      // simultaneously "active" (e.g. leftover test drives), which one
+      // wins is deterministic instead of depending on row order.
+      orderBy: { createdAt: "desc" },
     });
 
     const isActive = (d: (typeof drives)[number]) => {
@@ -32,13 +34,25 @@ const getRecruitmentEventStatus = unstable_cache(
         const notEnded = !d.registrationEnd || now <= d.registrationEnd;
         return started && notEnded;
       }
-      return d.status === EventStatusType.ONGOING;
+      return d.status === RecruitmentDriveStatus.OPEN;
     };
 
-    const active = drives.find(isActive);
-    if (active) {
-      return { isOpen: true, opensAt: null, eventId: active.id };
+    const activeCandidates = drives.filter(isActive);
+
+    if (activeCandidates.length > 1) {
+      console.warn(
+        `[recruitment-status] ${activeCandidates.length} recruitment drives are simultaneously active (${activeCandidates
+          .map((d) => d.id)
+          .join(", ")}). Using the most recently created one — close or ` +
+          `set an end date on the others to avoid ambiguity.`
+      );
     }
+
+    const active = activeCandidates[0];
+    if (active) {
+      return { isOpen: true, opensAt: null, driveId: active.id };
+    }
+
     const next = drives
       .filter((d) => d.registrationStart && d.registrationStart > now)
       .sort(
@@ -48,12 +62,12 @@ const getRecruitmentEventStatus = unstable_cache(
 
     return {
       isOpen: false,
-      opensAt: next?.registrationStart ?? next?.startAt ?? null,
-      eventId: next?.id ?? null,
+      opensAt: next?.registrationStart ?? null,
+      driveId: next?.id ?? null,
     };
   },
-  ["recruitment-event-status"],
-  { tags: ["events"], revalidate: 60 }
+  ["recruitment-drive-status"],
+  { tags: ["recruitment-drives"], revalidate: 60 }
 );
 
-export default getRecruitmentEventStatus;
+export default getRecruitmentDriveStatus;

@@ -298,7 +298,7 @@ const DashboardContent = () => {
       icon: MessageSquare,
     },
     {
-      label: "Total Recruits",
+      label: "Recruitment Drives",
       value: stats.recruits,
       tab: "recruitment",
       color: "purple",

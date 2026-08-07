@@ -99,7 +99,7 @@ const Footer = () => {
               </li>
               <li>
                 <Link
-                  href="/contactus"
+                  href="/contact-us"
                   className="hover:text-white transition-colors hover-trigger"
                 >
                   Contact Us

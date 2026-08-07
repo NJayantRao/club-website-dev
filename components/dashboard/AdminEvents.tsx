@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { EventStatusType, EventType } from "@prisma/client";
-import { useRouter } from "next/navigation";
 
 import Popup from "../ui/Popup";
 import EventModal, { EventFormData } from "../ui/EventModal";
@@ -90,7 +89,6 @@ const validateEvent = (form: EventFormData) => {
 };
 
 const AdminEvents = () => {
-  const router = useRouter();
   const [page, setPage] = useState(1);
 
   const {
@@ -236,10 +234,6 @@ const AdminEvents = () => {
 
       await refetch();
 
-      if (form.type === EventType.RECRUITMENT) {
-        router.replace("/dashboard?tab=recruitment");
-      }
-
       setPopup({
         show: true,
         type: "success",
@@ -384,16 +378,10 @@ const AdminEvents = () => {
                 )}
                 <div className="mt-4 flex gap-2">
                   <Link
-                    href={
-                      event.type === EventType.RECRUITMENT
-                        ? "/dashboard?tab=recruitment"
-                        : `/dashboard/events/${event.id}`
-                    }
+                    href={`/dashboard/events/${event.id}`}
                     className="flex-1 rounded-xl bg-white px-4 py-2 text-center text-sm font-semibold text-black transition hover:bg-neutral-200"
                   >
-                    {event.type === EventType.RECRUITMENT
-                      ? "Manage Applications"
-                      : "Manage Event"}
+                    Manage Event
                   </Link>
                 </div>
               </div>

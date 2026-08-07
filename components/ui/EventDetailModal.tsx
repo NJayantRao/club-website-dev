@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Calendar, Clock, MapPin, Users, X } from "lucide-react";
 import { motion } from "framer-motion";
-import { EventStatusType, EventType } from "@prisma/client";
+import { EventStatusType } from "@prisma/client";
 
 import type { EventItem } from "@/lib/events";
 import ImageCarousel from "./Imagecarousal";
@@ -95,22 +95,14 @@ export default function EventDetailsModal({
           </div>
         </div>
 
-        {isUpcoming &&
-          (event.type === EventType.RECRUITMENT ? (
-            <Link
-              href={`/recruitment`}
-              className="block w-full rounded-2xl bg-white py-4 text-center font-bold text-black transition-all hover:bg-neutral-200"
-            >
-              Register Now
-            </Link>
-          ) : (
-            <Link
-              href={`/events/${event.id}/register`}
-              className="block w-full rounded-2xl bg-white py-4 text-center font-bold text-black transition-all hover:bg-neutral-200"
-            >
-              Register Now
-            </Link>
-          ))}
+        {isUpcoming && (
+          <Link
+            href={`/events/${event.id}/register`}
+            className="block w-full rounded-2xl bg-white py-4 text-center font-bold text-black transition-all hover:bg-neutral-200"
+          >
+            Register Now
+          </Link>
+        )}
       </motion.div>
     </motion.div>
   );

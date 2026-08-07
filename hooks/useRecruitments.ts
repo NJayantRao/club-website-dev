@@ -4,22 +4,22 @@ import { useEffect, useState } from "react";
 interface FetchParams {
   page?: number;
   limit?: number;
-  type?: string;
+  status?: string;
 }
 
-const fetchRecruitment = async (params: FetchParams = {}) => {
+const fetchDrives = async (params: FetchParams = {}) => {
   const query = new URLSearchParams();
 
   if (params.page) query.set("page", String(params.page));
   if (params.limit) query.set("limit", String(params.limit));
-  if (params.type) query.set("type", params.type);
+  if (params.status) query.set("status", params.status);
 
   const { data } = await axios.get(`/api/recruitment?${query}`);
 
   return data;
 };
 
-export function useRecruitmentList(params: FetchParams = {}) {
+export function useRecruitmentDrives(params: FetchParams = {}) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -32,7 +32,7 @@ export function useRecruitmentList(params: FetchParams = {}) {
         setLoading(true);
         setError(null);
 
-        const result = await fetchRecruitment(params);
+        const result = await fetchDrives(params);
 
         if (mounted) {
           setData(result);
@@ -53,20 +53,20 @@ export function useRecruitmentList(params: FetchParams = {}) {
     return () => {
       mounted = false;
     };
-  }, [params.page, params.limit, params.type]);
+  }, [params.page, params.limit, params.status]);
 
   return {
     data,
     loading,
     error,
-    refetch: () => fetchRecruitment(params).then(setData),
+    refetch: () => fetchDrives(params).then(setData),
   };
 }
 
 interface RecruitmentStatus {
   isOpen: boolean;
   opensAt: string | null;
-  eventId: string | null;
+  driveId: string | null;
 }
 
 export function useRecruitmentStatus() {
@@ -83,14 +83,14 @@ export function useRecruitmentStatus() {
           setStatus({
             isOpen: Boolean(data.isOpen),
             opensAt: data.opensAt ?? null,
-            eventId: data.eventId ?? null,
+            driveId: data.driveId ?? null,
           });
         }
       })
       .catch(() => {
         // Fail closed on the client too.
         if (mounted) {
-          setStatus({ isOpen: false, opensAt: null, eventId: null });
+          setStatus({ isOpen: false, opensAt: null, driveId: null });
         }
       })
       .finally(() => {
@@ -105,23 +105,32 @@ export function useRecruitmentStatus() {
   return { status, loading };
 }
 
-export function useSubmitRecruitment() {
+export function useSubmitRecruitment(driveId: string | null | undefined) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const submitRecruitment = async (data: any) => {
+    if (!driveId) {
+      const err = new Error("No active recruitment drive to apply to.");
+      setError(err);
+      throw err;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const response = await axios.post("/api/recruitment", data);
+      const response = await axios.post(
+        `/api/recruitment/${driveId}/response`,
+        data
+      );
 
       return response.data;
     } catch (err: any) {
-      const error =
+      const message =
         err.response?.data?.message ?? err.message ?? "Submission failed";
 
-      const newError = new Error(error);
+      const newError = new Error(message);
       setError(newError);
       throw newError;
     } finally {

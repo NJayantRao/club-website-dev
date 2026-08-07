@@ -3,24 +3,58 @@ import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { revalidateTag } from "next/cache";
 
-const EMAIL_RE = /^\S+@\S+\.\S+$/;
-const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
 
-const EDITABLE_TEXT_FIELDS = [
-  "name",
-  "rollNo",
-  "instituteEmail",
-  "personalEmail",
-  "gender",
-  "branch",
-  "phoneNo",
-  "locality",
-  "techStack",
-] as const;
+    if (!id) {
+      return Response.json(
+        { success: false, message: "Drive id is required" },
+        { status: 400 }
+      );
+    }
 
-type EditableTextField = (typeof EDITABLE_TEXT_FIELDS)[number];
+    const drive = await prisma.recruitmentDrive.findUnique({
+      where: { id },
+      include: {
+        formFields: {
+          orderBy: { order: "asc" },
+        },
+        _count: {
+          select: { responses: true },
+        },
+      },
+    });
 
-export async function PUT(
+    if (!drive) {
+      return Response.json(
+        { success: false, message: "Recruitment drive not found" },
+        { status: 404 }
+      );
+    }
+
+    return Response.json(
+      {
+        success: true,
+        message: "Recruitment drive fetched successfully",
+        drive,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Failed to fetch recruitment drive:", error);
+
+    return Response.json(
+      { success: false, message: "Failed to fetch recruitment drive" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -35,104 +69,77 @@ export async function PUT(
 
     if (!id) {
       return Response.json(
-        {
-          success: false,
-          message: "Recruitment id is required",
-        },
+        { success: false, message: "Drive id is required" },
         { status: 400 }
       );
     }
 
     const body = await request.json();
 
-    const data: Partial<Record<EditableTextField, string>> & {
-      isSelected?: boolean;
-    } = {};
-    for (const field of EDITABLE_TEXT_FIELDS) {
-      if (body[field] === undefined) continue;
+    const {
+      title,
+      description,
+      year,
+      status,
+      registrationStart,
+      registrationEnd,
+    } = body;
 
-      const value = String(body[field]).trim();
+    // Only one drive should be accepting applications at a time — opening
+    // a second one is almost always a mistake (it's how the "field added
+    // to one drive, applicant lands on another" bug happens). Block it
+    // with a clear error instead of silently allowing it.
+    if (status === "OPEN") {
+      const conflicting = await prisma.recruitmentDrive.findFirst({
+        where: { status: "OPEN", id: { not: id } },
+        select: { id: true, title: true },
+      });
 
-      if (!value) {
+      if (conflicting) {
         return Response.json(
           {
             success: false,
-            message: `${field} cannot be empty`,
+            message: `"${conflicting.title}" is already open for registration. Close it before opening this drive.`,
+            conflictingDriveId: conflicting.id,
           },
-          { status: 400 }
+          { status: 409 }
         );
       }
-
-      data[field] = value;
     }
 
-    if (data.instituteEmail && !EMAIL_RE.test(data.instituteEmail)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Institute email must be a valid email",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (data.personalEmail && !EMAIL_RE.test(data.personalEmail)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Personal email must be a valid email",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (data.phoneNo && !PHONE_RE.test(data.phoneNo)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Phone number must be valid",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (body.isSelected !== undefined) {
-      data.isSelected = Boolean(body.isSelected);
-    }
-
-    if (Object.keys(data).length === 0) {
-      return Response.json(
-        {
-          success: false,
-          message: "No fields to update",
-        },
-        { status: 400 }
-      );
-    }
-
-    const recruitment = await prisma.recruitment.update({
+    const drive = await prisma.recruitmentDrive.update({
       where: { id },
-      data,
+      data: {
+        ...(title !== undefined && { title }),
+        ...(description !== undefined && { description }),
+        ...(year !== undefined && { year: Number(year) }),
+        ...(status !== undefined && { status }),
+        ...(registrationStart !== undefined && {
+          registrationStart: registrationStart
+            ? new Date(registrationStart)
+            : null,
+        }),
+        ...(registrationEnd !== undefined && {
+          registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+        }),
+      },
     });
 
-    revalidateTag("recruitment", "max");
+    revalidateTag("recruitment-drives", "max");
 
     return Response.json(
       {
         success: true,
-        message: "Application updated successfully",
-        recruitment,
+        message: "Recruitment drive updated successfully",
+        drive,
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Failed to update recruitment application:", error);
+    console.error("Failed to update recruitment drive:", error);
 
     return Response.json(
-      {
-        success: false,
-        message: "Failed to update application",
-      },
+      { success: false, message: "Failed to update recruitment drive" },
       { status: 500 }
     );
   }
@@ -153,35 +160,27 @@ export async function DELETE(
 
     if (!id) {
       return Response.json(
-        {
-          success: false,
-          message: "Recruitment id is required",
-        },
+        { success: false, message: "Drive id is required" },
         { status: 400 }
       );
     }
 
-    await prisma.recruitment.delete({
-      where: { id },
-    });
+    await prisma.recruitmentDrive.delete({ where: { id } });
 
-    revalidateTag("recruitment", "max");
+    revalidateTag("recruitment-drives", "max");
 
     return Response.json(
       {
         success: true,
-        message: "Application deleted successfully",
+        message: "Recruitment drive deleted successfully",
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Failed to delete recruitment application:", error);
+    console.error("Failed to delete recruitment drive:", error);
 
     return Response.json(
-      {
-        success: false,
-        message: "Failed to delete application",
-      },
+      { success: false, message: "Failed to delete recruitment drive" },
       { status: 500 }
     );
   }

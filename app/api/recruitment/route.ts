@@ -2,215 +2,112 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
 import { revalidateTag, unstable_cache } from "next/cache";
-import getRecruitmentEventStatus from "@/lib/recruitment-status";
-
-const getCachedRecruits = unstable_cache(
-  async (skip: number, limit: number, sortBy: string, sortOrder: string) => {
-    const [recruits, total] = await Promise.all([
-      prisma.recruitment.findMany({
-        skip,
-        take: limit,
-        orderBy: { [sortBy]: sortOrder as "asc" | "desc" },
-      }),
-      prisma.recruitment.count(),
-    ]);
-
-    return { recruits, total };
-  },
-  ["recruitment-list"],
-  { tags: ["recruitment"], revalidate: 86400 }
-);
+import { RecruitmentDriveStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdminAuth();
+
+    if (!auth.success) {
+      return auth.response;
+    }
+
+    const user = auth.user;
+
+    if (!user) {
+      return Response.json(
+        { success: false, message: "User not authorized" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const {
-      name,
-      rollNo,
-      instituteEmail,
-      personalEmail,
-      gender,
-      branch,
-      phoneNo,
-      locality,
-      techStack,
-      eventId,
-      answers = {},
+      title,
+      description,
+      year,
+      status,
+      registrationStart,
+      registrationEnd,
     } = body;
 
-    if (
-      !name ||
-      !rollNo ||
-      !instituteEmail ||
-      !personalEmail ||
-      !gender ||
-      !branch ||
-      !phoneNo ||
-      !locality ||
-      !techStack
-    ) {
+    if (!title) {
       return Response.json(
-        {
-          success: false,
-          message: "All fields are required",
-        },
+        { success: false, message: "Title is required" },
         { status: 400 }
       );
     }
 
-    const recruitmentStatus = await getRecruitmentEventStatus();
-    const targetEventId = eventId ?? recruitmentStatus.eventId;
-
-    if (!targetEventId) {
+    if (!year) {
       return Response.json(
-        {
-          success: false,
-          message: "No active recruitment event is available right now.",
-        },
+        { success: false, message: "Year is required" },
         { status: 400 }
       );
     }
 
-    const recruitmentEvent = await prisma.event.findUnique({
-      where: { id: targetEventId },
-      select: {
-        id: true,
-        formFields: {
-          orderBy: {
-            order: "asc",
-          },
-        },
-      },
-    });
-
-    if (!recruitmentEvent) {
-      return Response.json(
-        {
-          success: false,
-          message: "Recruitment event not found.",
-        },
-        { status: 404 }
-      );
-    }
-
-    for (const field of recruitmentEvent.formFields) {
-      const value = answers?.[field.name];
-      const normalized = typeof value === "string" ? value.trim() : value;
-
-      if (field.required && (!normalized || normalized.length === 0)) {
-        return Response.json(
-          {
-            success: false,
-            message: `${field.label} is required.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      if (!normalized) continue;
-
-      switch (field.type) {
-        case "EMAIL":
-          if (!/^\S+@\S+\.\S+$/.test(String(normalized))) {
-            return Response.json(
-              {
-                success: false,
-                message: `${field.label} must be a valid email.`,
-              },
-              { status: 400 }
-            );
-          }
-          break;
-        case "NUMBER":
-          if (!/^\d+$/.test(String(normalized))) {
-            return Response.json(
-              {
-                success: false,
-                message: `${field.label} must be numeric.`,
-              },
-              { status: 400 }
-            );
-          }
-          break;
-        case "PHONE":
-          if (!/^\+?[0-9\s-]{7,15}$/.test(String(normalized))) {
-            return Response.json(
-              {
-                success: false,
-                message: `${field.label} must be a valid phone number.`,
-              },
-              { status: 400 }
-            );
-          }
-          break;
-        case "URL":
-          if (!/^https?:\/\/\S+/.test(String(normalized))) {
-            return Response.json(
-              {
-                success: false,
-                message: `${field.label} must be a valid URL.`,
-              },
-              { status: 400 }
-            );
-          }
-          break;
-        default:
-          break;
-      }
-    }
-
-    const recruitment = await prisma.recruitment.create({
+    const drive = await prisma.recruitmentDrive.create({
       data: {
-        name,
-        rollNo,
-        instituteEmail,
-        personalEmail,
-        gender,
-        branch,
-        phoneNo,
-        locality,
-        techStack,
+        title,
+        description,
+        year: Number(year),
+        status: status || undefined,
+        registrationStart: registrationStart
+          ? new Date(registrationStart)
+          : null,
+        registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+        createdBy: user.id,
       },
     });
 
-    try {
-      await prisma.eventResponse.create({
-        data: {
-          eventId: targetEventId,
-          name,
-          email: personalEmail,
-          phone: phoneNo,
-          answers: answers ?? {},
-        },
-      });
-    } catch (responseError) {
-      console.warn("Recruitment response sync failed:", responseError);
-    }
-
-    revalidateTag("recruitment", "max");
-    revalidateTag("events", "max");
+    revalidateTag("recruitments", "max");
 
     return Response.json(
       {
         success: true,
-        message: "Application submitted successfully",
-        recruitment,
+        message: `Recruitment drive "${drive.title}" created successfully`,
+        drive,
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Failed to submit recruitment application:", error);
+    console.error("Failed to create recruitment drive:", error);
 
     return Response.json(
-      {
-        success: false,
-        message: "Failed to submit application",
-      },
+      { success: false, message: "Failed to create recruitment drive" },
       { status: 500 }
     );
   }
 }
+
+const getCachedDrives = unstable_cache(
+  async (
+    where: Record<string, unknown>,
+    skip: number,
+    limit: number,
+    sortBy: string,
+    sortOrder: string
+  ) => {
+    const [drives, total] = await Promise.all([
+      prisma.recruitmentDrive.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder as "asc" | "desc" },
+        include: {
+          _count: {
+            select: { responses: true },
+          },
+        },
+      }),
+      prisma.recruitmentDrive.count({ where }),
+    ]);
+
+    return { drives, total };
+  },
+  ["recruitments-admin-list"],
+  { tags: ["recruitments"], revalidate: 86400 }
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -223,12 +120,18 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     const page = parseInt(searchParams.get("page")!) || 1;
-    const limit = parseInt(searchParams.get("limit")!) || 15;
-    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const limit = parseInt(searchParams.get("limit")!) || 10;
+    const sortBy = searchParams.get("sortBy") || "year";
     const sortOrder = searchParams.get("sortOrder") || "desc";
+    const status = searchParams.get("status");
     const skip = (page - 1) * limit;
 
-    const { recruits, total } = await getCachedRecruits(
+    const where = {
+      ...(status ? { status: status as RecruitmentDriveStatus } : {}),
+    };
+
+    const { drives, total } = await getCachedDrives(
+      where,
       skip,
       limit,
       sortBy,
@@ -238,8 +141,8 @@ export async function GET(request: NextRequest) {
     return Response.json(
       {
         success: true,
-        message: "Recruitment applications fetched successfully",
-        data: recruits,
+        message: "Recruitment drives fetched successfully",
+        drives,
         pagination: {
           page,
           limit,
@@ -250,45 +153,10 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Failed to fetch recruitment applications:", error);
+    console.error("Failed to fetch recruitment drives:", error);
 
     return Response.json(
-      {
-        success: false,
-        message: "Failed to fetch recruitment applications",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE() {
-  try {
-    const auth = await requireAdminAuth();
-
-    if (!auth.success) {
-      return auth.response;
-    }
-
-    await prisma.recruitment.deleteMany({});
-
-    revalidateTag("recruitment", "max");
-
-    return Response.json(
-      {
-        success: true,
-        message: "All recruitment applications cleared",
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Failed to clear recruitment applications:", error);
-
-    return Response.json(
-      {
-        success: false,
-        message: "Failed to clear recruitment applications",
-      },
+      { success: false, message: "Failed to fetch recruitment drives" },
       { status: 500 }
     );
   }

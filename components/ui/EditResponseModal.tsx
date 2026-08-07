@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import DynamicAnswerFields, {
+  DynamicFormFieldLite,
+  validateDynamicAnswers,
+} from "./form/DynamicAnswerFields";
 import EditModalShell from "./EditModelShell";
-import { ReadOnlyField, SelectField, TextField } from "./FormField";
+import { SelectField, TextField } from "./FormField";
 
 export interface EventResponseRecord {
   id: string;
@@ -14,12 +18,7 @@ export interface EventResponseRecord {
   answers: Record<string, unknown>;
 }
 
-export interface EventFormFieldLite {
-  name: string;
-  label: string;
-  type: "TEXT" | "TEXTAREA" | "URL" | "NUMBER" | "EMAIL" | "PHONE" | "FILE";
-  required: boolean;
-}
+export type EventFormFieldLite = DynamicFormFieldLite;
 
 interface ResponseFormData {
   name: string;
@@ -35,8 +34,6 @@ type FieldErrors = Partial<Record<"name" | "email" | "phone", string>> & {
 };
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
-const URL_RE = /^https?:\/\/\S+/;
-const NUMBER_RE = /^\d+$/;
 const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
 
 const toFormData = (
@@ -79,40 +76,7 @@ const validate = (
     errors.phone = "Invalid phone number";
   }
 
-  const answerErrors: Record<string, string> = {};
-
-  for (const field of formFields) {
-    if (field.type === "FILE") continue;
-
-    const value = form.answers[field.name]?.trim() ?? "";
-
-    if (field.required && !value) {
-      answerErrors[field.name] = "Required";
-      continue;
-    }
-
-    if (!value) continue;
-
-    switch (field.type) {
-      case "EMAIL":
-        if (!EMAIL_RE.test(value)) answerErrors[field.name] = "Invalid email";
-        break;
-      case "URL":
-        if (!URL_RE.test(value)) answerErrors[field.name] = "Invalid URL";
-        break;
-      case "NUMBER":
-        if (!NUMBER_RE.test(value))
-          answerErrors[field.name] = "Must be numeric";
-        break;
-      case "PHONE":
-        if (!PHONE_RE.test(value))
-          answerErrors[field.name] = "Invalid phone number";
-        break;
-      default:
-        break;
-    }
-  }
-
+  const answerErrors = validateDynamicAnswers(form.answers, formFields);
   if (Object.keys(answerErrors).length > 0) errors.answers = answerErrors;
 
   return errors;
@@ -228,52 +192,13 @@ const EditResponseModal = ({
         ]}
       />
 
-      {formFields.length > 0 && (
-        <div className="space-y-5 border-t border-white/10 pt-5">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
-            Custom Form Answers
-          </p>
-
-          {formFields.map((field) =>
-            field.type === "FILE" ? (
-              <ReadOnlyField
-                key={field.name}
-                label={field.label}
-                value={String(record.answers?.[field.name] ?? "")}
-              />
-            ) : field.type === "TEXTAREA" ? (
-              <div key={field.name}>
-                <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
-                  {field.label}
-                  {errors.answers?.[field.name] && (
-                    <span className="ml-2 normal-case tracking-normal text-red-400">
-                      — {errors.answers[field.name]}
-                    </span>
-                  )}
-                </label>
-                <textarea
-                  rows={3}
-                  value={form.answers[field.name] ?? ""}
-                  onChange={(e) => updateAnswer(field.name, e.target.value)}
-                  className={`w-full mt-1 rounded-xl bg-white/5 border px-4 py-3 text-white text-sm resize-none outline-none transition ${
-                    errors.answers?.[field.name]
-                      ? "border-red-500"
-                      : "border-white/10 focus:border-white/20"
-                  }`}
-                />
-              </div>
-            ) : (
-              <TextField
-                key={field.name}
-                label={field.label}
-                value={form.answers[field.name] ?? ""}
-                onChange={(e) => updateAnswer(field.name, e.target.value)}
-                error={errors.answers?.[field.name]}
-              />
-            )
-          )}
-        </div>
-      )}
+      <DynamicAnswerFields
+        formFields={formFields}
+        answers={form.answers}
+        rawAnswers={record.answers}
+        errors={errors.answers}
+        onChange={updateAnswer}
+      />
     </EditModalShell>
   );
 };

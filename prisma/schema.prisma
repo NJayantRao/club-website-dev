@@ -113,29 +113,64 @@ model MediaUsage {
 }
 
 model Admin {
-  id            String   @id @default(uuid())
-  name          String
-  email         String   @unique
-  password      String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  createdEvents Event[]
+  id                     String             @id @default(uuid())
+  name                   String
+  email                  String             @unique
+  password               String
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  createdEvents          Event[]
+  createdRecruitmentDrives RecruitmentDrive[]
+}
+model RecruitmentDrive {
+  id                String                 @id @default(uuid())
+  title             String
+  description       String?
+  year              Int
+  status            RecruitmentDriveStatus @default(UPCOMING)
+  registrationStart DateTime?
+  registrationEnd   DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  createdBy         String
+  creator           Admin                  @relation(fields: [createdBy], references: [id])
+  formFields        RecruitmentFormField[]
+  responses         RecruitmentResponse[]
 }
 
-model Recruitment {
-  id             String   @id @default(uuid())
+model RecruitmentFormField {
+  id            String           @id @default(uuid())
+  recruitmentId String
+  name          String
+  label         String
+  type          FieldType
+  required      Boolean          @default(false)
+  placeholder   String?
+  order         Int?
+  createdAt     DateTime         @default(now())
+  recruitment   RecruitmentDrive @relation(fields: [recruitmentId], references: [id], onDelete: Cascade)
+}
+model RecruitmentResponse {
+  id             String           @id @default(uuid())
+  recruitmentId  String
   name           String
-  rollNo         String
-  instituteEmail String
+  rollNumber     String
+  registrationNo String
+  gender         Gender
+  nistEmail      String
   personalEmail  String
-  gender         String
   branch         String
-  phoneNo        String
-  locality       String
+  hackerrankId   String
+  phoneNumber    String
+  locality       Locality
   techStack      String
-  isSelected     Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isSelected     Boolean          @default(false)
+  answers        Json             @default("{}")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  recruitment    RecruitmentDrive @relation(fields: [recruitmentId], references: [id], onDelete: Cascade)
+
+  @@unique([recruitmentId, personalEmail])
 }
 
 model ContactInquiry {
@@ -152,7 +187,22 @@ model ContactInquiry {
 enum EventType {
   TECH
   NON_TECH
-  RECRUITMENT
+}
+
+enum RecruitmentDriveStatus {
+  UPCOMING
+  OPEN
+  CLOSED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum Locality {
+  LOCALITE
+  HOSTELITE
 }
 
 enum EventStatusType {
