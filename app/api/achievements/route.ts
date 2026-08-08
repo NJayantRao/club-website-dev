@@ -160,12 +160,6 @@ const getCachedAchievements = unstable_cache(
       MediaUsageType.ACHIEVEMENT,
       achievements.map((achievement) => achievement.id)
     );
-
-    // unstable_cache serializes its return value to JSON. A cache miss
-    // hands back a real Date from Prisma, but a later cache hit hands back
-    // the deserialized (plain string) version — so do the Date -> string
-    // conversion here, inside the cached function, to keep the shape
-    // identical on every call instead of only correct on the first one.
     const data = achievements.map((achievement) => ({
       id: achievement.id,
       title: achievement.title,
@@ -203,9 +197,6 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         message: "Achievement fetched successfully",
-        // Field names match the Prisma schema (and the POST/PATCH routes),
-        // so the frontend can use the same `Achievement` type everywhere
-        // instead of a one-off remapped shape.
         data,
         pagination: {
           page,

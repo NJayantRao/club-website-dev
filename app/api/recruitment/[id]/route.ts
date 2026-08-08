@@ -85,10 +85,6 @@ export async function PATCH(
       registrationEnd,
     } = body;
 
-    // Only one drive should be accepting applications at a time — opening
-    // a second one is almost always a mistake (it's how the "field added
-    // to one drive, applicant lands on another" bug happens). Block it
-    // with a clear error instead of silently allowing it.
     if (status === "OPEN") {
       const conflicting = await prisma.recruitmentDrive.findFirst({
         where: { status: "OPEN", id: { not: id } },
@@ -168,11 +164,6 @@ export async function DELETE(
     try {
       await prisma.recruitmentDrive.delete({ where: { id } });
     } catch (error: any) {
-      // Already gone (deleted out-of-band, or the row simply never made
-      // it past a failed create). The end state the caller wants — this
-      // row not existing — is already true, so treat it as success
-      // instead of erroring, and make sure to still bust the cached
-      // admin list so a stale/ghost card doesn't linger.
       if (error?.code !== "P2025") {
         throw error;
       }

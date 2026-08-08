@@ -22,9 +22,6 @@ const getRecruitmentDriveStatus = unstable_cache(
         registrationStart: true,
         registrationEnd: true,
       },
-      // Most recently created first, so if more than one drive is
-      // simultaneously "active" (e.g. leftover test drives), which one
-      // wins is deterministic instead of depending on row order.
       orderBy: { createdAt: "desc" },
     });
 

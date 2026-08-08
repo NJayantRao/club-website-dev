@@ -13,10 +13,6 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const URL_RE = /^https?:\/\/\S+/;
 const NUMBER_RE = /^\d+$/;
 const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
-
-/** Validates a set of dynamic answers against their field config. Shared so
- *  the event-response and recruitment-response edit modals apply exactly
- *  the same rules the public submission endpoint enforces. */
 export const validateDynamicAnswers = (
   answers: Record<string, string>,
   formFields: DynamicFormFieldLite[]
@@ -65,9 +61,6 @@ interface DynamicAnswerFieldsProps {
   heading?: string;
 }
 
-/** Renders one input per configured form field, bound to `answers[field.name]`.
- *  FILE-type answers are shown read-only — correcting those means
- *  re-uploading, which is out of scope for a quick text-correction modal. */
 const DynamicAnswerFields = ({
   formFields,
   answers,

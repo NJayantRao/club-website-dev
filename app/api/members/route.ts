@@ -48,9 +48,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload before the transaction: Cloudinary isn't part of the DB
-    // transaction, so there's no point holding a DB connection open while
-    // waiting on it.
     let imageUrl: string | null = null;
     let imagePublicId: string | null = null;
 

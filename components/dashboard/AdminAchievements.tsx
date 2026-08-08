@@ -34,10 +34,6 @@ interface MemberLite {
   name: string;
 }
 
-// Images now live in the generic Media/MediaUsage tables rather than a
-// direct column, but the API still returns a plain `imageUrl` string on
-// every achievement — so this local type (not the raw Prisma model) is
-// what the frontend should use.
 interface Achievement {
   id: string;
   title: string;
@@ -123,10 +119,6 @@ const AdminAchievements: React.FC = () => {
     fetchAchievements(page);
   }, [page]);
 
-  // NOTE: assumes GET /api/our-team?role=ALL returns { data: [{ id, name, ... }], pagination }
-  // — the same list-endpoint shape every other admin list in this project
-  // uses. If your /api/our-team route returns members under a different
-  // key (e.g. `members`/`team`), adjust the `data.data` line below.
   const loadMembers = async () => {
     setMembersLoading(true);
 

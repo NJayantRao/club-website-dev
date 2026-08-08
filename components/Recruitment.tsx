@@ -30,10 +30,6 @@ interface DriveData {
   formFields: DriveFormField[];
 }
 
-// These are the fixed, always-required fields every application must
-// have. Anything a specific drive wants beyond this comes through that
-// drive's own configurable formFields instead (rendered as "Additional
-// Details" below).
 const recruitmentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   rollNumber: z.string().min(1, "Roll number is required"),

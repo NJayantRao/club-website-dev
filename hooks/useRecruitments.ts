@@ -88,7 +88,6 @@ export function useRecruitmentStatus() {
         }
       })
       .catch(() => {
-        // Fail closed on the client too.
         if (mounted) {
           setStatus({ isOpen: false, opensAt: null, driveId: null });
         }

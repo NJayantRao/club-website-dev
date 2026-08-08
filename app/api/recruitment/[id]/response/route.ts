@@ -8,10 +8,6 @@ const EMAIL_RE = /^\S+@\S+\.\S+$/;
 const URL_RE = /^https?:\/\/\S+/;
 const NUMBER_RE = /^\d+$/;
 const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
-
-// The fixed, always-required fields every application must have —
-// anything beyond this goes through the drive's own configurable
-// RecruitmentFormField set instead (see the `answers` handling below).
 const REQUIRED_TEXT_FIELDS = [
   "name",
   "rollNumber",
@@ -172,7 +168,6 @@ export async function POST(
       );
     }
 
-    // Extra, per-drive custom questions on top of the fixed fields above.
     const answers = { ...(body.answers ?? {}) };
 
     for (const field of drive.formFields) {

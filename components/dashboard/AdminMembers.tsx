@@ -103,8 +103,6 @@ const validateMember = (form: MemberFormData) => {
     errors.email = "Email is required";
   }
 
-  // Advisors are described by their designation, not a skills list, so
-  // only students (current members / alumni) need at least one skill.
   if (form.role !== Role.ADVISOR && !form.skills.trim()) {
     errors.skills = "At least one skill is required";
   }
