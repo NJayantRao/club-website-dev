@@ -67,7 +67,7 @@ const getRecruitmentDriveStatus = unstable_cache(
     };
   },
   ["recruitment-drive-status"],
-  { tags: ["recruitment-drives"], revalidate: 60 }
+  { tags: ["recruitments"], revalidate: 60 }
 );
 
 export default getRecruitmentDriveStatus;

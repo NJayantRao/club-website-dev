@@ -125,7 +125,7 @@ export async function PATCH(
       },
     });
 
-    revalidateTag("recruitment-drives", "max");
+    revalidateTag("recruitments", "max");
 
     return Response.json(
       {
@@ -165,9 +165,20 @@ export async function DELETE(
       );
     }
 
-    await prisma.recruitmentDrive.delete({ where: { id } });
+    try {
+      await prisma.recruitmentDrive.delete({ where: { id } });
+    } catch (error: any) {
+      // Already gone (deleted out-of-band, or the row simply never made
+      // it past a failed create). The end state the caller wants — this
+      // row not existing — is already true, so treat it as success
+      // instead of erroring, and make sure to still bust the cached
+      // admin list so a stale/ghost card doesn't linger.
+      if (error?.code !== "P2025") {
+        throw error;
+      }
+    }
 
-    revalidateTag("recruitment-drives", "max");
+    revalidateTag("recruitments", "max");
 
     return Response.json(
       {
