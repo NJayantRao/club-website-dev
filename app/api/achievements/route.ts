@@ -53,18 +53,15 @@ export async function POST(request: NextRequest) {
           status: 400,
         }
       );
+    } else if (memberIds.length === 0) {
+      return Response.json(
+        {
+          success: false,
+          message: "At least one member is required.",
+        },
+        { status: 400 }
+      );
     }
-
-    //  TODO: refer after members api
-    // if (memberIds.length === 0) {
-    //   return Response.json(
-    //     {
-    //       success: false,
-    //       message: "At least one member is required.",
-    //     },
-    //     { status: 400 }
-    //   );
-    // }
 
     let imageUrl: string | null = null;
     let imagePublicId: string | null = null;
@@ -85,11 +82,16 @@ export async function POST(request: NextRequest) {
           description: description,
           tag,
           achievedAt: new Date(achievedAt),
-          // members: {
-          //   connect: memberIds.map((id: string) => ({
-          //     id,
-          //   })),
-          // },
+          members: {
+            connect: memberIds.map((id: string) => ({
+              id,
+            })),
+          },
+        },
+        include: {
+          members: {
+            select: { id: true, name: true },
+          },
         },
       });
 
@@ -146,6 +148,9 @@ const getCachedAchievements = unstable_cache(
           description: true,
           achievedAt: true,
           tag: true,
+          members: {
+            select: { id: true, name: true },
+          },
         },
       }),
       prisma.achievement.count(),
@@ -168,6 +173,7 @@ const getCachedAchievements = unstable_cache(
       achievedAt: achievement.achievedAt.toISOString(),
       tag: achievement.tag,
       imageUrl: imageMap.get(achievement.id) ?? null,
+      members: achievement.members,
     }));
 
     return { data, total };

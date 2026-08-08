@@ -8,6 +8,7 @@ import {
   Search,
   Trophy,
   Calendar,
+  Users,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
@@ -28,6 +29,11 @@ const TYPES = [
   "other",
 ] as const;
 
+interface MemberLite {
+  id: string;
+  name: string;
+}
+
 // Images now live in the generic Media/MediaUsage tables rather than a
 // direct column, but the API still returns a plain `imageUrl` string on
 // every achievement — so this local type (not the raw Prisma model) is
@@ -39,6 +45,7 @@ interface Achievement {
   achievedAt: string;
   tag: AchievementType;
   imageUrl: string | null;
+  members: MemberLite[];
 }
 
 interface PaginationInfo {
@@ -55,6 +62,7 @@ const emptyForm = {
   description: "",
   tag: "hackathon" as string,
   achievedAt: "",
+  memberIds: [] as string[],
 };
 
 function toDateInput(value: string | Date) {
@@ -74,12 +82,17 @@ const AdminAchievements: React.FC = () => {
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
 
+  const [members, setMembers] = useState<MemberLite[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberQuery, setMemberQuery] = useState("");
+
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [memberError, setMemberError] = useState("");
 
   const [popup, setPopup] = useState({
     show: false,
@@ -110,12 +123,38 @@ const AdminAchievements: React.FC = () => {
     fetchAchievements(page);
   }, [page]);
 
+  // NOTE: assumes GET /api/our-team?role=ALL returns { data: [{ id, name, ... }], pagination }
+  // — the same list-endpoint shape every other admin list in this project
+  // uses. If your /api/our-team route returns members under a different
+  // key (e.g. `members`/`team`), adjust the `data.data` line below.
+  const loadMembers = async () => {
+    setMembersLoading(true);
+
+    try {
+      const { data } = await axios.get("/api/our-team", {
+        params: { role: "ALL", limit: 500 },
+      });
+
+      setMembers(
+        (data.data ?? []).map((m: any) => ({ id: m.id, name: m.name }))
+      );
+    } catch (err) {
+      console.error("Failed to load members for achievement picker:", err);
+      setMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
   const openCreateModal = () => {
     setModalMode("create");
     setEditingId(null);
     setForm(emptyForm);
     setPhotoFiles([]);
+    setMemberError("");
+    setMemberQuery("");
     setShowModal(true);
+    loadMembers();
   };
 
   const openEditModal = (a: Achievement) => {
@@ -126,13 +165,33 @@ const AdminAchievements: React.FC = () => {
       description: a.description ?? "",
       tag: a.tag.toLowerCase(),
       achievedAt: toDateInput(a.achievedAt),
+      memberIds: a.members.map((m) => m.id),
     });
     setPhotoFiles([]);
+    setMemberError("");
+    setMemberQuery("");
     setShowModal(true);
+    loadMembers();
+  };
+
+  const toggleMember = (id: string) => {
+    setForm((f) => ({
+      ...f,
+      memberIds: f.memberIds.includes(id)
+        ? f.memberIds.filter((m) => m !== id)
+        : [...f.memberIds, id],
+    }));
+    setMemberError("");
   };
 
   const handleSave = async (e?: React.FormEvent) => {
     e?.preventDefault();
+
+    if (form.memberIds.length === 0) {
+      setMemberError("Select at least one member.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -142,6 +201,7 @@ const AdminAchievements: React.FC = () => {
         fd.append("description", form.description);
         fd.append("tag", form.tag.toUpperCase());
         fd.append("achievedAt", form.achievedAt);
+        fd.append("memberIds", JSON.stringify(form.memberIds));
         if (photoFiles[0]) fd.append("image", photoFiles[0]);
 
         await axios.post("/api/achievements", fd, {
@@ -167,6 +227,7 @@ const AdminAchievements: React.FC = () => {
           description: form.description,
           tag: form.tag.toUpperCase(),
           achievedAt: new Date(form.achievedAt).toISOString(),
+          memberIds: form.memberIds,
         });
 
         setPopup({
@@ -236,6 +297,12 @@ const AdminAchievements: React.FC = () => {
       );
     });
   }, [achievements, query, tagFilter]);
+
+  const visibleMembers = useMemo(() => {
+    const q = memberQuery.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) => m.name.toLowerCase().includes(q));
+  }, [members, memberQuery]);
 
   if (isLoading) {
     return (
@@ -369,6 +436,15 @@ const AdminAchievements: React.FC = () => {
                   <Calendar className="h-3 w-3" />
                   {new Date(a.achievedAt).toLocaleDateString()}
                 </p>
+
+                {a.members.length > 0 && (
+                  <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-neutral-500">
+                    <Users className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                    <span className="line-clamp-1">
+                      {a.members.map((m) => m.name).join(", ")}
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -465,6 +541,62 @@ const AdminAchievements: React.FC = () => {
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                    Members
+                    <span className="ml-1 text-red-400">*</span>
+                  </label>
+                  {form.memberIds.length > 0 && (
+                    <span className="text-[10px] text-neutral-500">
+                      {form.memberIds.length} selected
+                    </span>
+                  )}
+                </div>
+
+                <input
+                  value={memberQuery}
+                  onChange={(e) => setMemberQuery(e.target.value)}
+                  placeholder="Search members..."
+                  className="mb-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white outline-none focus:border-white/20"
+                />
+
+                <div
+                  className={`max-h-48 space-y-1 overflow-y-auto rounded-xl border p-2 ${
+                    memberError ? "border-red-500/50" : "border-white/10"
+                  }`}
+                >
+                  {membersLoading ? (
+                    <p className="p-2 text-xs text-neutral-500">
+                      Loading members...
+                    </p>
+                  ) : visibleMembers.length === 0 ? (
+                    <p className="p-2 text-xs text-neutral-500">
+                      No members found.
+                    </p>
+                  ) : (
+                    visibleMembers.map((m) => (
+                      <label
+                        key={m.id}
+                        className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-neutral-300 hover:bg-white/5"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.memberIds.includes(m.id)}
+                          onChange={() => toggleMember(m.id)}
+                          className="accent-white"
+                        />
+                        {m.name}
+                      </label>
+                    ))
+                  )}
+                </div>
+
+                {memberError && (
+                  <p className="mt-1 text-xs text-red-400">{memberError}</p>
+                )}
               </div>
 
               {modalMode === "create" ? (
