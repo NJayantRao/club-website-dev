@@ -17,7 +17,10 @@ const getCachedTeam = unstable_cache(
         where,
         skip,
         take: limit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: [
+          { designation: { sort: "asc", nulls: "last" } },
+          { [sortBy]: sortOrder as "asc" | "desc" },
+        ],
       }),
       prisma.member.count({ where }),
     ]);

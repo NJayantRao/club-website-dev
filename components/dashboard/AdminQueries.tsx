@@ -17,13 +17,15 @@ import axios from "axios";
 
 const LIMIT = 15;
 
+type QueryStatus = "PENDING" | "READ" | "RESOLVED";
+
 interface ContactQuery {
   id: string;
   name: string;
   email: string;
   phoneNo: string;
   message: string;
-  status: "PENDING" | "READ" | "RESOLVED";
+  status: QueryStatus;
   createdAt: string;
 }
 
@@ -33,6 +35,20 @@ interface PaginationInfo {
   total: number;
   totalPages: number;
 }
+
+type StatusFilter = "all" | QueryStatus;
+
+const STATUS_STYLES: Record<QueryStatus, string> = {
+  PENDING: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30",
+  READ: "bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30",
+  RESOLVED: "bg-green-500/15 text-green-300 ring-1 ring-green-500/30",
+};
+
+const STATUS_LABELS: Record<QueryStatus, string> = {
+  PENDING: "Pending",
+  READ: "Read",
+  RESOLVED: "Resolved",
+};
 
 function initials(name: string) {
   return name
@@ -50,6 +66,7 @@ const AdminQueries: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [editingQuery, setEditingQuery] = useState<ContactInquiryRecord | null>(
     null
   );
@@ -132,19 +149,45 @@ const AdminQueries: React.FC = () => {
     }
   };
 
+  // Quick status change straight from the card, without opening the full
+  // edit modal — mirrors the "toggle" pattern used elsewhere (recruitment
+  // selection, event attendance).
+  const quickSetStatus = async (q: ContactQuery, status: QueryStatus) => {
+    if (q.status === status) return;
+
+    try {
+      await axios.patch(`/api/contact-us/${q.id}`, { status });
+      fetchQueries(page);
+    } catch (err) {
+      console.error(err);
+      setPopup({
+        show: true,
+        type: "success",
+        message: "Unable to update status.",
+        isConfirm: false,
+        onConfirm: () => {},
+      });
+    }
+  };
+
   const visibleQueries = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    if (!q) return queries;
+    return queries.filter((item) => {
+      if (statusFilter !== "all" && item.status !== statusFilter) {
+        return false;
+      }
 
-    return queries.filter(
-      (item) =>
+      if (!q) return true;
+
+      return (
         item.name.toLowerCase().includes(q) ||
         item.email.toLowerCase().includes(q) ||
         item.phoneNo?.toLowerCase().includes(q) ||
         item.message.toLowerCase().includes(q)
-    );
-  }, [queries, query]);
+      );
+    });
+  }, [queries, query, statusFilter]);
 
   if (isLoading) {
     return (
@@ -165,12 +208,37 @@ const AdminQueries: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold text-white">Contact Queries</h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          {pagination?.total ?? queries.length} total quer
-          {(pagination?.total ?? queries.length) === 1 ? "y" : "ies"}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-white">Contact Queries</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            {pagination?.total ?? queries.length} total quer
+            {(pagination?.total ?? queries.length) === 1 ? "y" : "ies"}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+          {(
+            [
+              { key: "all", label: "All" },
+              { key: "PENDING", label: "Pending" },
+              { key: "READ", label: "Read" },
+              { key: "RESOLVED", label: "Resolved" },
+            ] as { key: StatusFilter; label: string }[]
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(tab.key)}
+              className={`rounded-xl px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${
+                statusFilter === tab.key
+                  ? "bg-white text-black"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="relative">
@@ -189,7 +257,7 @@ const AdminQueries: React.FC = () => {
           <p className="text-neutral-500">
             {queries.length === 0
               ? "No queries yet."
-              : "No queries match your search."}
+              : "No queries match your search or filter."}
           </p>
         </div>
       ) : (
@@ -214,9 +282,16 @@ const AdminQueries: React.FC = () => {
                     </div>
 
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {q.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {q.name}
+                        </p>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[q.status]}`}
+                        >
+                          {STATUS_LABELS[q.status]}
+                        </span>
+                      </div>
                       <p className="truncate text-xs text-neutral-500">
                         {new Date(q.createdAt).toLocaleDateString("en-IN")}
                       </p>
@@ -282,6 +357,28 @@ const AdminQueries: React.FC = () => {
                         <p className="rounded-xl bg-white/5 p-3 text-sm leading-relaxed text-neutral-300">
                           {q.message}
                         </p>
+
+                        <div
+                          className="flex flex-wrap gap-2 pt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {(
+                            ["PENDING", "READ", "RESOLVED"] as QueryStatus[]
+                          ).map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => quickSetStatus(q, s)}
+                              disabled={q.status === s}
+                              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition disabled:cursor-default ${
+                                q.status === s
+                                  ? STATUS_STYLES[s]
+                                  : "bg-white/5 text-neutral-500 hover:bg-white/10 hover:text-neutral-300"
+                              }`}
+                            >
+                              Mark {STATUS_LABELS[s]}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </motion.div>
                   )}

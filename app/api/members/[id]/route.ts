@@ -68,6 +68,28 @@ export async function DELETE(
     );
   }
 }
+function optionalTextField(
+  formData: FormData,
+  key: string
+): string | null | undefined {
+  const raw = formData.get(key);
+
+  if (raw === null) return undefined;
+
+  const trimmed = (raw as string).trim();
+  return trimmed === "" ? null : trimmed;
+}
+
+function requiredTextField(
+  formData: FormData,
+  key: string
+): string | undefined {
+  const raw = formData.get(key);
+
+  if (raw === null) return undefined;
+
+  return (raw as string).trim();
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -95,12 +117,26 @@ export async function PATCH(
       );
     }
 
-    const name = (formData.get("name") as string) ?? undefined;
-    const email = (formData.get("email") as string) ?? undefined;
-    const phone = (formData.get("phone") as string) ?? undefined;
+    const name = requiredTextField(formData, "name");
+    const email = requiredTextField(formData, "email");
+    const phone = optionalTextField(formData, "phone");
     const role = (formData.get("role") as Role) ?? undefined;
-    const year = (formData.get("year") as string) ?? undefined;
-    const designation = (formData.get("designation") as string) ?? undefined;
+    const year = optionalTextField(formData, "year");
+    const designation = optionalTextField(formData, "designation");
+
+    if (name === "") {
+      return Response.json(
+        { success: false, message: "Name cannot be empty." },
+        { status: 400 }
+      );
+    }
+
+    if (email === "") {
+      return Response.json(
+        { success: false, message: "Email cannot be empty." },
+        { status: 400 }
+      );
+    }
 
     const skillsValue = formData.get("skills");
     const skills = skillsValue
