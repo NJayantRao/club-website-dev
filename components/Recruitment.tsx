@@ -37,8 +37,17 @@ const recruitmentSchema = z.object({
   gender: z.enum(["MALE", "FEMALE"], {
     error: "Please select a gender",
   }),
-  nistEmail: z.string().email("Enter a valid NIST email"),
-  personalEmail: z.string().email("Enter a valid personal email"),
+  nistEmail: z
+    .string()
+    .email("Enter a valid NIST email")
+    .regex(/^[a-zA-Z0-9._%+-]+@nist\.edu$/i, "Must be a valid @nist.edu email"),
+  personalEmail: z
+    .string()
+    .email("Enter a valid personal email")
+    .refine(
+      (val) => !/^[a-zA-Z0-9._%+-]+@nist\.edu$/i.test(val),
+      "Use a non-institute email here"
+    ),
   branch: z.string().min(1, "Branch is required"),
   hackerrankId: z.string().min(1, "HackerRank ID is required"),
   phoneNumber: z.string().min(10, "Enter a valid phone number").max(15),
@@ -417,7 +426,7 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
                 icon={Code}
                 name="hackerrankId"
                 type="text"
-                placeholder="Username"
+                placeholder="@clubexcel407"
                 error={errors.hackerrankId}
                 value={formData.hackerrankId}
                 onChange={handleChange}
@@ -485,9 +494,6 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
                   <h3 className="text-lg font-semibold text-white">
                     Additional Details
                   </h3>
-                  <p className="mt-1 text-sm text-neutral-500">
-                    These questions come from this recruitment drive.
-                  </p>
                 </div>
 
                 {drive.formFields.map((field) => (

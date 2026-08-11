@@ -24,6 +24,9 @@ export type EventFormData = {
 
 type FieldErrors = Record<string, string>;
 
+const blurOnWheel = (e: React.WheelEvent<HTMLInputElement>) =>
+  e.currentTarget.blur();
+
 interface EventModalProps {
   eventId: string | null;
 
@@ -222,6 +225,7 @@ const EventModal = ({
                 type="datetime-local"
                 value={form.startAt}
                 onChange={(e) => updateField("startAt", e.target.value)}
+                onWheel={blurOnWheel}
                 className={`mt-1 w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white transition focus:outline-none ${
                   errors.startAt
                     ? "border-red-500"
@@ -243,6 +247,7 @@ const EventModal = ({
                 type="datetime-local"
                 value={form.endAt}
                 onChange={(e) => updateField("endAt", e.target.value)}
+                onWheel={blurOnWheel}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none"
               />
             </div>
@@ -261,6 +266,7 @@ const EventModal = ({
                 onChange={(e) =>
                   updateField("registrationStart", e.target.value)
                 }
+                onWheel={blurOnWheel}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none"
               />
             </div>
@@ -274,6 +280,7 @@ const EventModal = ({
                 type="datetime-local"
                 value={form.registrationEnd}
                 onChange={(e) => updateField("registrationEnd", e.target.value)}
+                onWheel={blurOnWheel}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none"
               />
             </div>
@@ -290,6 +297,7 @@ const EventModal = ({
               min={1}
               value={form.capacity}
               onChange={(e) => updateField("capacity", e.target.value)}
+              onWheel={blurOnWheel}
               placeholder="100"
               className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none"
             />

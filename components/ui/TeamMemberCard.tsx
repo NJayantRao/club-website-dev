@@ -33,7 +33,6 @@ const resolveSrc = (img: string | null, name: string) =>
 
 export default function TeamMemberCard({
   name,
-  role,
   designation,
   label,
   img,
@@ -88,14 +87,12 @@ export default function TeamMemberCard({
         <p className="text-[11px] text-purple-400/80 font-mono uppercase tracking-[0.25em]">
           {label}
         </p>
-        {designation && (
-          <p className="text-neutral-300 font-mono text-[11px] tracking-widest uppercase mt-2">
-            {designation}
-          </p>
-        )}
-        <p className="text-neutral-500 font-mono text-[10px] tracking-widest uppercase mt-1">
-          {role}
-        </p>
+        {designation &&
+          designation.trim().toLowerCase() !== label.trim().toLowerCase() && (
+            <p className="text-neutral-300 font-mono text-[11px] tracking-widest uppercase mt-2">
+              {designation}
+            </p>
+          )}
       </div>
     </div>
   );

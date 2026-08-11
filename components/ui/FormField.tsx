@@ -42,13 +42,26 @@ export const TextField = ({
   label,
   optional,
   error,
+  onWheel,
   ...inputProps
-}: TextFieldProps) => (
-  <div>
-    <LabelRow label={label} optional={optional} error={error} />
-    <input {...inputProps} className={fieldClass(error)} />
-  </div>
-);
+}: TextFieldProps) => {
+  const preventScrollChange = (e: React.WheelEvent<HTMLInputElement>) => {
+    if (inputProps.type === "number" || inputProps.type === "datetime-local") {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <div>
+      <LabelRow label={label} optional={optional} error={error} />
+      <input
+        {...inputProps}
+        onWheel={onWheel ?? preventScrollChange}
+        className={fieldClass(error)}
+      />
+    </div>
+  );
+};
 
 interface TextAreaFieldProps extends Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,

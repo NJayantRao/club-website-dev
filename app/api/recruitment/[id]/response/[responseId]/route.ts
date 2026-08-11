@@ -4,6 +4,9 @@ import { requireAdminAuth } from "@/lib/authorize-admin";
 import { revalidateTag } from "next/cache";
 import { Gender, Locality } from "@prisma/client";
 
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+const INSTITUTE_EMAIL_RE = /^[a-zA-Z0-9._%+-]+@nist\.edu$/i;
+
 export async function PATCH(
   request: NextRequest,
   {
@@ -41,6 +44,40 @@ export async function PATCH(
         },
         { status: 404 }
       );
+    }
+
+    if (
+      body.nistEmail !== undefined &&
+      !INSTITUTE_EMAIL_RE.test(String(body.nistEmail).trim())
+    ) {
+      return Response.json(
+        {
+          success: false,
+          message: "NIST email must be a valid @nist.edu email",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (body.personalEmail !== undefined) {
+      const personalEmail = String(body.personalEmail).trim();
+
+      if (!EMAIL_RE.test(personalEmail)) {
+        return Response.json(
+          { success: false, message: "Personal email must be a valid email" },
+          { status: 400 }
+        );
+      }
+
+      if (INSTITUTE_EMAIL_RE.test(personalEmail)) {
+        return Response.json(
+          {
+            success: false,
+            message: "Personal email must not be an @nist.edu email",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const updated = await prisma.recruitmentResponse.update({

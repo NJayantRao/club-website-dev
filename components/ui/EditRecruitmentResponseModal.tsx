@@ -51,7 +51,10 @@ type FieldErrors = Partial<Record<FixedFieldKey, string>> & {
 };
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
+const INSTITUTE_EMAIL_RE = /^[a-zA-Z0-9._%+-]+@nist\.edu$/i;
 const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
+const ROLL_NO_RE = /^[a-zA-Z0-9-\/]{3,20}$/;
+const REG_NO_RE = /^[a-zA-Z0-9-\/]{3,20}$/;
 
 const toFormData = (
   record: RecruitmentResponseRecord,
@@ -88,23 +91,40 @@ const validate = (
 ): FieldErrors => {
   const errors: FieldErrors = {};
 
-  if (!form.name.trim()) errors.name = "Required";
-  if (!form.rollNumber.trim()) errors.rollNumber = "Required";
-  if (!form.registrationNo.trim()) errors.registrationNo = "Required";
+  if (!form.name.trim()) {
+    errors.name = "Required";
+  } else if (form.name.trim().length < 2) {
+    errors.name = "Name is too short";
+  }
+
+  if (!form.rollNumber.trim()) {
+    errors.rollNumber = "Required";
+  } else if (!ROLL_NO_RE.test(form.rollNumber.trim())) {
+    errors.rollNumber = "Invalid roll number";
+  }
+
+  if (!form.registrationNo.trim()) {
+    errors.registrationNo = "Required";
+  } else if (!REG_NO_RE.test(form.registrationNo.trim())) {
+    errors.registrationNo = "Invalid registration number";
+  }
+
   if (!form.branch.trim()) errors.branch = "Required";
   if (!form.hackerrankId.trim()) errors.hackerrankId = "Required";
   if (!form.techStack.trim()) errors.techStack = "Required";
 
   if (!form.nistEmail.trim()) {
     errors.nistEmail = "Required";
-  } else if (!EMAIL_RE.test(form.nistEmail.trim())) {
-    errors.nistEmail = "Invalid email";
+  } else if (!INSTITUTE_EMAIL_RE.test(form.nistEmail.trim())) {
+    errors.nistEmail = "Must be a valid @nist.edu email";
   }
 
   if (!form.personalEmail.trim()) {
     errors.personalEmail = "Required";
   } else if (!EMAIL_RE.test(form.personalEmail.trim())) {
     errors.personalEmail = "Invalid email";
+  } else if (INSTITUTE_EMAIL_RE.test(form.personalEmail.trim())) {
+    errors.personalEmail = "Use a non-institute email here";
   }
 
   if (!form.phoneNumber.trim()) {

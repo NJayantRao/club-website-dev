@@ -28,7 +28,9 @@ export type RecruitmentFormData = Omit<
 type FieldErrors = Partial<Record<keyof RecruitmentFormData, string>>;
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
+const INSTITUTE_EMAIL_RE = /^[a-zA-Z0-9._%+-]+@nist\.edu$/i;
 const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
+const ROLL_NO_RE = /^[a-zA-Z0-9-\/]{3,20}$/;
 
 const toFormData = (record: RecruitmentRecord): RecruitmentFormData => ({
   name: record.name,
@@ -46,22 +48,34 @@ const toFormData = (record: RecruitmentRecord): RecruitmentFormData => ({
 const validate = (form: RecruitmentFormData): FieldErrors => {
   const errors: FieldErrors = {};
 
-  if (!form.name.trim()) errors.name = "Required";
-  if (!form.rollNo.trim()) errors.rollNo = "Required";
+  if (!form.name.trim()) {
+    errors.name = "Required";
+  } else if (form.name.trim().length < 2) {
+    errors.name = "Name is too short";
+  }
+
+  if (!form.rollNo.trim()) {
+    errors.rollNo = "Required";
+  } else if (!ROLL_NO_RE.test(form.rollNo.trim())) {
+    errors.rollNo = "Invalid roll number";
+  }
+
   if (!form.branch.trim()) errors.branch = "Required";
   if (!form.locality.trim()) errors.locality = "Required";
   if (!form.techStack.trim()) errors.techStack = "Required";
 
   if (!form.instituteEmail.trim()) {
     errors.instituteEmail = "Required";
-  } else if (!EMAIL_RE.test(form.instituteEmail.trim())) {
-    errors.instituteEmail = "Invalid email";
+  } else if (!INSTITUTE_EMAIL_RE.test(form.instituteEmail.trim())) {
+    errors.instituteEmail = "Must be a valid @nist.edu email";
   }
 
   if (!form.personalEmail.trim()) {
     errors.personalEmail = "Required";
   } else if (!EMAIL_RE.test(form.personalEmail.trim())) {
     errors.personalEmail = "Invalid email";
+  } else if (INSTITUTE_EMAIL_RE.test(form.personalEmail.trim())) {
+    errors.personalEmail = "Use a non-institute email here";
   }
 
   if (!form.phoneNo.trim()) {

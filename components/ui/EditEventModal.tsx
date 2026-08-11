@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type WheelEvent } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,6 +36,8 @@ interface EditEventModalProps {
   onClose: () => void;
   onUpdated: () => void;
 }
+
+const blurOnWheel = (e: WheelEvent<HTMLInputElement>) => e.currentTarget.blur();
 
 function toInputDate(value?: string | null) {
   if (!value) return "";
@@ -317,6 +319,7 @@ export default function EditEventModal({
                   type="number"
                   value={capacity}
                   onChange={(e) => setCapacity(e.target.value)}
+                  onWheel={blurOnWheel}
                   placeholder="Leave empty for unlimited"
                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 outline-none transition focus:border-white/20"
                 />
@@ -338,6 +341,7 @@ export default function EditEventModal({
                     type="datetime-local"
                     value={startAt}
                     onChange={(e) => setStartAt(e.target.value)}
+                    onWheel={blurOnWheel}
                     className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 outline-none transition focus:border-white/20"
                   />
                 </div>
@@ -352,6 +356,7 @@ export default function EditEventModal({
                     type="datetime-local"
                     value={endAt}
                     onChange={(e) => setEndAt(e.target.value)}
+                    onWheel={blurOnWheel}
                     className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 outline-none transition focus:border-white/20"
                   />
                 </div>
@@ -374,6 +379,7 @@ export default function EditEventModal({
                     type="datetime-local"
                     value={registrationStart}
                     onChange={(e) => setRegistrationStart(e.target.value)}
+                    onWheel={blurOnWheel}
                     className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 outline-none transition focus:border-white/20"
                   />
                 </div>
@@ -387,6 +393,7 @@ export default function EditEventModal({
                     type="datetime-local"
                     value={registrationEnd}
                     onChange={(e) => setRegistrationEnd(e.target.value)}
+                    onWheel={blurOnWheel}
                     className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 outline-none transition focus:border-white/20"
                   />
                 </div>

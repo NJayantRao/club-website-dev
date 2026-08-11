@@ -69,7 +69,7 @@ const OurTeam = ({ advisors, members, alumni }: OurTeamProps) => {
                 name={member.name}
                 role={member.role}
                 designation={member.designation ?? undefined}
-                label={member.designation ?? "Core Member"}
+                label="Core Member"
                 img={member.imageUrl}
                 accent="purple"
                 size="member"
@@ -89,7 +89,7 @@ const OurTeam = ({ advisors, members, alumni }: OurTeamProps) => {
                 name={member.name}
                 role={member.role}
                 designation={member.designation ?? undefined}
-                label={member.designation ?? "Alumnus"}
+                label="Alumnus"
                 img={member.imageUrl}
                 accent="purple"
                 size="member"

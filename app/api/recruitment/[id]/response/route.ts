@@ -5,6 +5,7 @@ import { revalidateTag } from "next/cache";
 import { Gender, Locality } from "@prisma/client";
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
+const INSTITUTE_EMAIL_RE = /^[a-zA-Z0-9._%+-]+@nist\.edu$/i;
 const URL_RE = /^https?:\/\/\S+/;
 const NUMBER_RE = /^\d+$/;
 const PHONE_RE = /^\+?[0-9\s-]{7,15}$/;
@@ -119,9 +120,12 @@ export async function POST(
       );
     }
 
-    if (!EMAIL_RE.test(body.nistEmail)) {
+    if (!INSTITUTE_EMAIL_RE.test(body.nistEmail)) {
       return Response.json(
-        { success: false, message: "NIST email must be a valid email" },
+        {
+          success: false,
+          message: "NIST email must be a valid @nist.edu email",
+        },
         { status: 400 }
       );
     }
@@ -129,6 +133,16 @@ export async function POST(
     if (!EMAIL_RE.test(body.personalEmail)) {
       return Response.json(
         { success: false, message: "Personal email must be a valid email" },
+        { status: 400 }
+      );
+    }
+
+    if (INSTITUTE_EMAIL_RE.test(body.personalEmail)) {
+      return Response.json(
+        {
+          success: false,
+          message: "Personal email must not be an @nist.edu email",
+        },
         { status: 400 }
       );
     }
