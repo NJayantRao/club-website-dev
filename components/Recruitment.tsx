@@ -28,6 +28,7 @@ interface DriveData {
   id: string;
   title: string;
   formFields: DriveFormField[];
+  whatsappLink: string | null;
 }
 
 const recruitmentSchema = z.object({
@@ -127,6 +128,7 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
       .then(({ data }) => {
         if (mounted && data.success) {
           setDrive(data.drive);
+          setWhatsappLink(data.drive.whatsappLink || "");
         }
       })
       .catch(() => {
@@ -426,7 +428,7 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
                 icon={Code}
                 name="hackerrankId"
                 type="text"
-                placeholder="@clubexcel407"
+                placeholder="Username"
                 error={errors.hackerrankId}
                 value={formData.hackerrankId}
                 onChange={handleChange}
@@ -494,6 +496,9 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
                   <h3 className="text-lg font-semibold text-white">
                     Additional Details
                   </h3>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    These questions come from this recruitment drive.
+                  </p>
                 </div>
 
                 {drive.formFields.map((field) => (

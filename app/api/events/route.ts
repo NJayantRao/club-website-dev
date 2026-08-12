@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       string | null;
     const registrationEnd = formData.get("registrationEnd") as string | null;
     const capacity = formData.get("capacity") as string | null;
+    const whatsappLink = formData.get("whatsappLink") as string | null;
 
     const image = formData.get("image") as File | null;
 
@@ -60,6 +61,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (whatsappLink && !/^https:\/\/\S+/.test(whatsappLink)) {
+      return Response.json(
+        { success: false, message: "WhatsApp link must be a valid https URL" },
+        { status: 400 }
+      );
+    }
+
     let imageUrl: string | null = null;
     let imagePublicId: string | null = null;
 
@@ -84,6 +92,7 @@ export async function POST(request: NextRequest) {
             : null,
           registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
           capacity: capacity ? Number(capacity) : null,
+          whatsappLink: whatsappLink || null,
           createdBy: user.id,
         },
       });

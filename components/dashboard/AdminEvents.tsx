@@ -68,6 +68,7 @@ const EMPTY_FORM: EventFormData = {
   registrationStart: "",
   registrationEnd: "",
   capacity: "",
+  whatsappLink: "",
 };
 
 const validateEvent = (form: EventFormData) => {
@@ -168,6 +169,8 @@ const AdminEvents = () => {
         : "",
 
       capacity: event.capacity?.toString() ?? "",
+
+      whatsappLink: event.whatsappLink ?? "",
     });
 
     setImagePreview(event.imageUrl ?? null);
@@ -213,6 +216,10 @@ const AdminEvents = () => {
 
       if (form.capacity) {
         fd.append("capacity", form.capacity);
+      }
+
+      if (form.whatsappLink) {
+        fd.append("whatsappLink", form.whatsappLink);
       }
 
       if (imageFile) {

@@ -42,6 +42,7 @@ model Event {
   registrationStart DateTime?
   registrationEnd   DateTime?
   capacity          Int?
+  whatsappLink      String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   createdBy         String
@@ -130,6 +131,7 @@ model RecruitmentDrive {
   status            RecruitmentDriveStatus @default(UPCOMING)
   registrationStart DateTime?
   registrationEnd   DateTime?
+  whatsappLink      String?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   createdBy         String

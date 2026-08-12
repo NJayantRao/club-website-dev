@@ -28,6 +28,7 @@ interface Event {
   registrationStart: string | null;
   registrationEnd: string | null;
   capacity: number | null;
+  whatsappLink: string | null;
 }
 
 interface EditEventModalProps {
@@ -96,6 +97,8 @@ export default function EditEventModal({
 
   const [registrationEnd, setRegistrationEnd] = useState("");
 
+  const [whatsappLink, setWhatsappLink] = useState("");
+
   useEffect(() => {
     if (!event) return;
 
@@ -116,6 +119,8 @@ export default function EditEventModal({
     setRegistrationStart(toInputDate(event.registrationStart));
 
     setRegistrationEnd(toInputDate(event.registrationEnd));
+
+    setWhatsappLink(event.whatsappLink ?? "");
 
     setImage(null);
   }, [event]);
@@ -143,6 +148,8 @@ export default function EditEventModal({
       formData.append("registrationEnd", registrationEnd);
 
       formData.append("capacity", capacity);
+
+      formData.append("whatsappLink", whatsappLink.trim());
 
       if (image) {
         formData.append("image", image);
@@ -398,6 +405,21 @@ export default function EditEventModal({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* WhatsApp */}
+            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-6">
+              <h3 className="mb-6 text-xl font-semibold">
+                WhatsApp Group Link
+              </h3>
+
+              <input
+                type="url"
+                value={whatsappLink}
+                onChange={(e) => setWhatsappLink(e.target.value)}
+                placeholder="https://chat.whatsapp.com/..."
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 outline-none transition focus:border-white/20"
+              />
             </div>
 
             {/* Footer */}

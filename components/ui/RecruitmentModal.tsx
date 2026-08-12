@@ -10,9 +10,10 @@ export interface RecruitmentDriveFormData {
   status: "UPCOMING" | "OPEN" | "CLOSED";
   registrationStart: string;
   registrationEnd: string;
+  whatsappLink: string;
 }
 
-type FieldErrors = Partial<Record<"title" | "year", string>>;
+type FieldErrors = Partial<Record<"title" | "year" | "whatsappLink", string>>;
 
 const currentYear = new Date().getFullYear();
 
@@ -23,10 +24,18 @@ const EMPTY_FORM: RecruitmentDriveFormData = {
   status: "UPCOMING",
   registrationStart: "",
   registrationEnd: "",
+  whatsappLink: "",
 };
 
 const validate = (form: RecruitmentDriveFormData): FieldErrors => {
   const errors: FieldErrors = {};
+
+  if (
+    form.whatsappLink.trim() &&
+    !/^https:\/\/\S+/.test(form.whatsappLink.trim())
+  ) {
+    errors.whatsappLink = "Must be a valid https URL";
+  }
 
   if (!form.title.trim()) errors.title = "Required";
   if (!form.year) errors.year = "Required";
@@ -130,6 +139,16 @@ const RecruitmentDriveModal = ({
           onChange={(e) => updateField("registrationEnd", e.target.value)}
         />
       </div>
+
+      <TextField
+        label="WhatsApp Group Link"
+        optional
+        type="url"
+        placeholder="https://chat.whatsapp.com/..."
+        value={form.whatsappLink}
+        onChange={(e) => updateField("whatsappLink", e.target.value)}
+        error={errors.whatsappLink}
+      />
     </EditModalShell>
   );
 };

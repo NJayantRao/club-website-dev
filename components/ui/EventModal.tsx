@@ -20,6 +20,8 @@ export type EventFormData = {
   registrationEnd: string;
 
   capacity: string;
+
+  whatsappLink: string;
 };
 
 type FieldErrors = Record<string, string>;
@@ -299,6 +301,24 @@ const EventModal = ({
               onChange={(e) => updateField("capacity", e.target.value)}
               onWheel={blurOnWheel}
               placeholder="100"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none"
+            />
+          </div>
+
+          {/* WhatsApp Group Link */}
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+              WhatsApp Group Link{" "}
+              <span className="normal-case tracking-normal text-neutral-600">
+                (optional)
+              </span>
+            </label>
+
+            <input
+              type="url"
+              value={form.whatsappLink}
+              onChange={(e) => updateField("whatsappLink", e.target.value)}
+              placeholder="https://chat.whatsapp.com/..."
               className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white focus:border-white/20 focus:outline-none"
             />
           </div>

@@ -83,7 +83,15 @@ export async function PATCH(
       status,
       registrationStart,
       registrationEnd,
+      whatsappLink,
     } = body;
+
+    if (whatsappLink && !/^https:\/\/\S+/.test(whatsappLink)) {
+      return Response.json(
+        { success: false, message: "WhatsApp link must be a valid https URL" },
+        { status: 400 }
+      );
+    }
 
     if (status === "OPEN") {
       const conflicting = await prisma.recruitmentDrive.findFirst({
@@ -117,6 +125,9 @@ export async function PATCH(
         }),
         ...(registrationEnd !== undefined && {
           registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+        }),
+        ...(whatsappLink !== undefined && {
+          whatsappLink: whatsappLink || null,
         }),
       },
     });

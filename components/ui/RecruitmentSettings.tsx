@@ -18,6 +18,7 @@ interface DriveFormState {
   status: "UPCOMING" | "OPEN" | "CLOSED";
   registrationStart: string;
   registrationEnd: string;
+  whatsappLink: string;
 }
 
 const toDatetimeLocal = (value: string | null) => {
@@ -67,6 +68,7 @@ const RecruitmentSettings = ({ id }: RecruitmentSettingsProps) => {
         status: d.status,
         registrationStart: toDatetimeLocal(d.registrationStart),
         registrationEnd: toDatetimeLocal(d.registrationEnd),
+        whatsappLink: d.whatsappLink ?? "",
       });
     } catch (error) {
       console.error(error);
@@ -291,6 +293,15 @@ const RecruitmentSettings = ({ id }: RecruitmentSettingsProps) => {
               onChange={(e) => updateField("registrationEnd", e.target.value)}
             />
           </div>
+
+          <TextField
+            label="WhatsApp Group Link"
+            optional
+            type="url"
+            placeholder="https://chat.whatsapp.com/..."
+            value={form.whatsappLink}
+            onChange={(e) => updateField("whatsappLink", e.target.value)}
+          />
 
           <button
             onClick={handleSave}

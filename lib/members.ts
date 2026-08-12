@@ -18,6 +18,7 @@ export const getMembers = unstable_cache(
       where: {
         role: Role.MEMBER,
       },
+      orderBy: { year: "desc" },
       select: {
         id: true,
         name: true,

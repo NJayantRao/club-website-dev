@@ -9,6 +9,7 @@ import {
   Users,
   ArrowLeft,
   CheckCircle2,
+  MessageCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -23,6 +24,7 @@ interface EventData {
   capacity: number | null;
   startAt: Date | string;
   formFields: EventFormField[];
+  whatsappLink: string | null;
 }
 
 interface PersonalDetails {
@@ -163,12 +165,25 @@ export default function RegisterEventPage() {
           Your registration for &ldquo;{event.title}&rdquo; has been received.
         </p>
 
-        <Link
-          href="/events"
-          className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black uppercase tracking-widest text-white transition-all hover:bg-white/10"
-        >
-          Back to Events
-        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row">
+          {event.whatsappLink && (
+            <a
+              href={event.whatsappLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 rounded-2xl bg-green-600 px-8 py-4 font-black uppercase tracking-widest text-white transition-all hover:bg-green-500"
+            >
+              <MessageCircle className="h-5 w-5" /> Join WhatsApp Group
+            </a>
+          )}
+
+          <Link
+            href="/events"
+            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black uppercase tracking-widest text-white transition-all hover:bg-white/10"
+          >
+            Back to Events
+          </Link>
+        </div>
       </div>
     );
   }

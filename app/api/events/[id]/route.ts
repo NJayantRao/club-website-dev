@@ -41,8 +41,16 @@ export async function PATCH(
       string | null;
     const registrationEnd = formData.get("registrationEnd") as string | null;
     const capacity = formData.get("capacity") as string | null;
+    const whatsappLink = formData.get("whatsappLink") as string | null;
 
     const image = formData.get("image") as File | null;
+
+    if (whatsappLink && !/^https:\/\/\S+/.test(whatsappLink)) {
+      return Response.json(
+        { success: false, message: "WhatsApp link must be a valid https URL" },
+        { status: 400 }
+      );
+    }
 
     let newImageUrl: string | undefined;
     let newImagePublicId: string | null = null;
@@ -77,6 +85,9 @@ export async function PATCH(
           }),
           ...(capacity !== null && {
             capacity: capacity ? Number(capacity) : null,
+          }),
+          ...(whatsappLink !== null && {
+            whatsappLink: whatsappLink || null,
           }),
         },
       });

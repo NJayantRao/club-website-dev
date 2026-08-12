@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
       status,
       registrationStart,
       registrationEnd,
+      whatsappLink,
     } = body;
 
     if (!title) {
@@ -46,6 +47,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (whatsappLink && !/^https:\/\/\S+/.test(whatsappLink)) {
+      return Response.json(
+        { success: false, message: "WhatsApp link must be a valid https URL" },
+        { status: 400 }
+      );
+    }
+
     const drive = await prisma.recruitmentDrive.create({
       data: {
         title,
@@ -56,6 +64,7 @@ export async function POST(request: NextRequest) {
           ? new Date(registrationStart)
           : null,
         registrationEnd: registrationEnd ? new Date(registrationEnd) : null,
+        whatsappLink: whatsappLink || null,
         createdBy: user.id,
       },
     });
