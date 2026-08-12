@@ -125,8 +125,6 @@ export default function RegisterEventPage() {
         answers,
       });
 
-      console.log(res);
-
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) {
@@ -165,21 +163,21 @@ export default function RegisterEventPage() {
           Your registration for &ldquo;{event.title}&rdquo; has been received.
         </p>
 
-        <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="flex w-full max-w-md flex-col gap-4 sm:max-w-none sm:w-auto sm:flex-row">
           {event.whatsappLink && (
             <a
               href={event.whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 rounded-2xl bg-green-600 px-8 py-4 font-black uppercase tracking-widest text-white transition-all hover:bg-green-500"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-green-600 px-6 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-green-500 sm:w-auto sm:px-8 sm:text-sm"
             >
-              <MessageCircle className="h-5 w-5" /> Join WhatsApp Group
+              <MessageCircle className="h-5 w-5 shrink-0" /> Join WhatsApp Group
             </a>
           )}
 
           <Link
             href="/events"
-            className="rounded-2xl border border-white/10 bg-white/5 px-8 py-4 font-black uppercase tracking-widest text-white transition-all hover:bg-white/10"
+            className="flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-white/10 sm:w-auto sm:px-8 sm:text-sm"
           >
             Back to Events
           </Link>

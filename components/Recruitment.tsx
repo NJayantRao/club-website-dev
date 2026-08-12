@@ -92,7 +92,6 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
   } = useSubmitRecruitment(driveId);
   const [submitError, setSubmitError] = useState("");
   const [drive, setDrive] = useState<DriveData | null>(null);
-  console.log(drive);
 
   const [formData, setFormData] = useState<RecruitmentFormData>({
     name: "",
@@ -246,20 +245,20 @@ const Recruitment = ({ driveId }: RecruitmentProps) => {
           Your application has been received. Join our WhatsApp group to stay
           updated.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex w-full max-w-md flex-col gap-4 sm:max-w-none sm:w-auto sm:flex-row">
           {whatsappLink && (
             <a
               href={whatsappLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 bg-green-600 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-green-500 transition-all"
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-green-600 px-6 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-green-500 sm:w-auto sm:px-8 sm:text-sm"
             >
-              <MessageCircle className="w-5 h-5" /> Join WhatsApp Group
+              <MessageCircle className="w-5 h-5 shrink-0" /> Join WhatsApp Group
             </a>
           )}
           <button
             onClick={() => (window.location.href = "/")}
-            className="flex items-center gap-3 bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-white/10 sm:w-auto sm:px-8 sm:text-sm"
           >
             Back to Home
           </button>
