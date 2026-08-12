@@ -32,6 +32,7 @@ interface Event {
   registrationStart: string | null;
   registrationEnd: string | null;
   capacity: number | null;
+  whatsappLink: string | null;
 }
 
 export default function EventOverview({ id }: EventOverviewProps) {
