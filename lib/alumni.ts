@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { MediaUsageType, Role } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getMediaUrlMap } from "@/lib/media";
+import { MemberSocialLink } from "@/lib/members";
 
 export interface AlumniItem {
   id: string;
@@ -9,6 +10,7 @@ export interface AlumniItem {
   role: string;
   designation: string | null;
   imageUrl: string | null;
+  links: MemberSocialLink[];
 }
 
 export const getAlumni = unstable_cache(
@@ -22,6 +24,12 @@ export const getAlumni = unstable_cache(
         name: true,
         role: true,
         designation: true,
+        links: {
+          select: {
+            platform: true,
+            url: true,
+          },
+        },
       },
     });
 
@@ -36,6 +44,7 @@ export const getAlumni = unstable_cache(
       role: member.role,
       designation: member.designation,
       imageUrl: imageMap.get(member.id) ?? null,
+      links: member.links,
     }));
   },
   ["alumni-list"],

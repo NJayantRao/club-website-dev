@@ -2,9 +2,11 @@ import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import { requireAdminAuth } from "@/lib/authorize-admin";
-import { MediaUsageType, Role } from "@prisma/client";
+import { MediaUsageType } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 import { getMediaUrl, removeMedia, replaceMedia } from "@/lib/media";
+import { validateFormData } from "@/lib/utils";
+import { updateMemberSchema } from "@/lib/validator";
 
 export async function DELETE(
   _request: NextRequest,
@@ -68,28 +70,6 @@ export async function DELETE(
     );
   }
 }
-function optionalTextField(
-  formData: FormData,
-  key: string
-): string | null | undefined {
-  const raw = formData.get(key);
-
-  if (raw === null) return undefined;
-
-  const trimmed = (raw as string).trim();
-  return trimmed === "" ? null : trimmed;
-}
-
-function requiredTextField(
-  formData: FormData,
-  key: string
-): string | undefined {
-  const raw = formData.get(key);
-
-  if (raw === null) return undefined;
-
-  return (raw as string).trim();
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -103,7 +83,6 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const formData = await request.formData();
 
     if (!id) {
       return Response.json(
@@ -117,33 +96,23 @@ export async function PATCH(
       );
     }
 
-    const name = requiredTextField(formData, "name");
-    const email = requiredTextField(formData, "email");
-    const phone = optionalTextField(formData, "phone");
-    const role = (formData.get("role") as Role) ?? undefined;
-    const year = optionalTextField(formData, "year");
-    const designation = optionalTextField(formData, "designation");
+    const validation = await validateFormData(request, updateMemberSchema);
 
-    if (name === "") {
-      return Response.json(
-        { success: false, message: "Name cannot be empty." },
-        { status: 400 }
-      );
+    if (!validation.success) {
+      return validation.response;
     }
 
-    if (email === "") {
-      return Response.json(
-        { success: false, message: "Email cannot be empty." },
-        { status: 400 }
-      );
-    }
-
-    const skillsValue = formData.get("skills");
-    const skills = skillsValue
-      ? (JSON.parse(skillsValue as string) as string[])
-      : undefined;
-
-    const image = formData.get("image") as File | null;
+    const {
+      name,
+      email,
+      phone,
+      role,
+      year,
+      designation,
+      skills,
+      links,
+      image,
+    } = validation.data;
 
     let newImageUrl: string | undefined;
     let newImagePublicId: string | null = null;
@@ -170,6 +139,20 @@ export async function PATCH(
         },
       });
 
+      if (links !== undefined) {
+        await tx.memberLink.deleteMany({ where: { memberId: id } });
+
+        if (links.length) {
+          await tx.memberLink.createMany({
+            data: links.map((link) => ({
+              memberId: id,
+              platform: link.platform,
+              url: link.url,
+            })),
+          });
+        }
+      }
+
       if (newImageUrl) {
         await replaceMedia(
           MediaUsageType.PROFILE,
@@ -186,13 +169,18 @@ export async function PATCH(
     const imageUrl =
       newImageUrl ?? (await getMediaUrl(MediaUsageType.PROFILE, id));
 
+    const currentLinks = await prisma.memberLink.findMany({
+      where: { memberId: id },
+      select: { platform: true, url: true },
+    });
+
     revalidateTag("members", "max");
 
     return Response.json(
       {
         success: true,
         message: `${member.name} updated successfully.`,
-        member: { ...member, imageUrl },
+        member: { ...member, imageUrl, links: currentLinks },
       },
       {
         status: 200,

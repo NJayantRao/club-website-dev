@@ -3,13 +3,18 @@ import { MediaUsageType, Role } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getMediaUrlMap } from "@/lib/media";
 
+export interface MemberSocialLink {
+  platform: string;
+  url: string;
+}
+
 export interface MemberItem {
   id: string;
   name: string;
   role: string;
   designation: string | null;
   imageUrl: string | null;
-  link: string;
+  links: MemberSocialLink[];
 }
 
 export const getMembers = unstable_cache(
@@ -18,18 +23,16 @@ export const getMembers = unstable_cache(
       where: {
         role: Role.MEMBER,
       },
-      orderBy: { year: "desc" },
+      orderBy: {
+        year: { sort: "desc", nulls: "last" },
+      },
       select: {
         id: true,
         name: true,
         role: true,
         designation: true,
         links: {
-          where: {
-            platform: "linkedin",
-          },
           select: {
-            id: true,
             platform: true,
             url: true,
           },
@@ -48,7 +51,7 @@ export const getMembers = unstable_cache(
       role: member.role,
       designation: member.designation,
       imageUrl: imageMap.get(member.id) ?? null,
-      link: member.links[0]?.url ?? "",
+      links: member.links,
     }));
   },
   ["members-list"],

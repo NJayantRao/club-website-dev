@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { MediaUsageType, Role } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getMediaUrlMap } from "@/lib/media";
+import { MemberSocialLink } from "@/lib/members";
 
 export interface AdvisorItem {
   id: string;
@@ -9,6 +10,7 @@ export interface AdvisorItem {
   role: string;
   designation: string | null;
   imageUrl: string | null;
+  links: MemberSocialLink[];
 }
 
 export const getAdvisors = unstable_cache(
@@ -22,6 +24,12 @@ export const getAdvisors = unstable_cache(
         name: true,
         role: true,
         designation: true,
+        links: {
+          select: {
+            platform: true,
+            url: true,
+          },
+        },
       },
     });
 
@@ -31,8 +39,12 @@ export const getAdvisors = unstable_cache(
     );
 
     return advisors.map((advisor) => ({
-      ...advisor,
+      id: advisor.id,
+      name: advisor.name,
+      role: advisor.role,
+      designation: advisor.designation,
       imageUrl: imageMap.get(advisor.id) ?? null,
+      links: advisor.links,
     }));
   },
   ["advisors-list"],

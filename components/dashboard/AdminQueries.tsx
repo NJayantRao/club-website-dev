@@ -149,9 +149,6 @@ const AdminQueries: React.FC = () => {
     }
   };
 
-  // Quick status change straight from the card, without opening the full
-  // edit modal — mirrors the "toggle" pattern used elsewhere (recruitment
-  // selection, event attendance).
   const quickSetStatus = async (q: ContactQuery, status: QueryStatus) => {
     if (q.status === status) return;
 

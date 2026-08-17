@@ -3,6 +3,8 @@ import { MediaUsageType, Role } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { unstable_cache } from "next/cache";
 import { getMediaUrlMap } from "@/lib/media";
+import { validateQuery } from "@/lib/utils";
+import { teamQuerySchema } from "@/lib/validator";
 
 const getCachedTeam = unstable_cache(
   async (
@@ -21,6 +23,11 @@ const getCachedTeam = unstable_cache(
           { designation: { sort: "asc", nulls: "last" } },
           { [sortBy]: sortOrder as "asc" | "desc" },
         ],
+        include: {
+          links: {
+            select: { platform: true, url: true },
+          },
+        },
       }),
       prisma.member.count({ where }),
     ]);
@@ -42,13 +49,13 @@ const getCachedTeam = unstable_cache(
 );
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
+  const validation = validateQuery(request, teamQuerySchema);
 
-  const page = parseInt(searchParams.get("page")!) || 1;
-  const limit = parseInt(searchParams.get("limit")!) || 5;
-  const sortBy = searchParams.get("sortBy") || "createdAt";
-  const sortOrder = searchParams.get("sortOrder") || "desc";
-  const role = searchParams.get("role") || "MEMBER";
+  if (!validation.success) {
+    return validation.response;
+  }
+
+  const { page, limit, sortBy, sortOrder, role } = validation.data;
 
   const where = role === "ALL" ? {} : { role: role as Role };
 

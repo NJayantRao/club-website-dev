@@ -1,7 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import { ArrowUpRight } from "lucide-react";
+import { SocialIcon } from "./SocialIcon";
 
 export type TeamMemberCardSize = "advisor" | "member";
+
+export interface TeamMemberCardLink {
+  platform: string;
+  url: string;
+}
 
 export interface TeamMemberCardProps {
   name: string;
@@ -11,7 +17,7 @@ export interface TeamMemberCardProps {
   label: string;
   accent: "blue" | "purple";
   size: TeamMemberCardSize;
-  linkedin?: string;
+  links?: TeamMemberCardLink[];
   delay?: number;
 }
 
@@ -36,13 +42,16 @@ export default function TeamMemberCard({
   designation,
   label,
   img,
-  linkedin,
+  links = [],
   accent,
   size,
   delay = 0,
 }: TeamMemberCardProps) {
   const [src, setSrc] = useState<string>(() => resolveSrc(img, name));
-  const clickable = Boolean(linkedin);
+
+  const linkedin = links.find((link) => link.platform === "linkedin");
+  const otherLinks = links.filter((link) => link.platform !== "linkedin");
+  const hasOtherLinks = otherLinks.length > 0;
 
   useEffect(() => {
     setSrc(resolveSrc(img, name));
@@ -54,25 +63,29 @@ export default function TeamMemberCard({
 
   const wrapperClass = useMemo(
     () =>
-      `group relative p-1 rounded-[2.5rem] bg-linear-to-b from-white/10 to-transparent ${accentHoverClass[accent]} transition-all duration-500 tilt-card h-120 ${
-        clickable ? "cursor-pointer" : ""
-      }`,
-    [accent, clickable]
+      `group relative p-1 rounded-[2.5rem] bg-linear-to-b from-white/10 to-transparent ${accentHoverClass[accent]} transition-all duration-500 tilt-card min-h-120`,
+    [accent]
   );
 
   return (
-    <div
-      data-aos="fade-up"
-      data-aos-delay={delay}
-      className={wrapperClass}
-      onClick={() => linkedin && window.open(linkedin, "_blank")}
-    >
+    <div data-aos="fade-up" data-aos-delay={delay} className={wrapperClass}>
+      {linkedin && (
+        <a
+          href={linkedin.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${name} on LinkedIn`}
+          title="LinkedIn"
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/10 backdrop-blur-md text-white opacity-0 rotate-45 scale-75 translate-x-1 -translate-y-1 group-hover:opacity-100 group-hover:rotate-0 group-hover:scale-100 group-hover:translate-x-0 group-hover:translate-y-0 hover:bg-white hover:text-black transition-all duration-300"
+        >
+          <ArrowUpRight className="w-4 h-4" />
+        </a>
+      )}
+
       <div className="h-full bg-[#080808] rounded-[2.4rem] p-10 border border-white/5 relative overflow-hidden flex flex-col items-center justify-center text-center">
-        <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-          <ArrowUpRight className="w-5 h-5 text-white" />
-        </div>
         <div
-          className={`${imageSizeClass[size]} overflow-hidden mb-8 border border-white/5 group-hover:border-purple-500/20 transition-all duration-700 bg-neutral-900 shadow-2xl`}
+          className={`${imageSizeClass[size]} relative overflow-hidden mb-8 border border-white/5 group-hover:border-purple-500/20 transition-all duration-700 bg-neutral-900 shadow-2xl`}
         >
           <img
             src={src}
@@ -81,6 +94,7 @@ export default function TeamMemberCard({
             onError={handleError}
           />
         </div>
+
         <h4 className="text-2xl font-bold text-white mb-3 tracking-tight leading-tight">
           {name}
         </h4>
@@ -93,6 +107,25 @@ export default function TeamMemberCard({
               {designation}
             </p>
           )}
+
+        {hasOtherLinks && (
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            {otherLinks.map((link) => (
+              <a
+                key={link.platform}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${name} on ${link.platform}`}
+                title={link.platform}
+                onClick={(e) => e.stopPropagation()}
+                className="p-3 rounded-xl bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-white hover:scale-110 transition-all duration-200"
+              >
+                <SocialIcon platform={link.platform} className="w-5 h-5" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

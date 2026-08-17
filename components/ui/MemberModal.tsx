@@ -2,7 +2,13 @@
 
 import React from "react";
 import { Role } from "@prisma/client";
-import { Upload, X } from "lucide-react";
+import { Upload, X, Plus, Trash2 } from "lucide-react";
+import { SOCIAL_PLATFORMS } from "@/lib/validator";
+
+export type MemberLinkFormData = {
+  platform: (typeof SOCIAL_PLATFORMS)[number];
+  url: string;
+};
 
 export type MemberFormData = {
   name: string;
@@ -12,9 +18,19 @@ export type MemberFormData = {
   year: string;
   designation: string;
   skills: string;
+  links: MemberLinkFormData[];
 };
 
 type FieldErrors = Record<string, string>;
+
+const PLATFORM_LABELS: Record<(typeof SOCIAL_PLATFORMS)[number], string> = {
+  linkedin: "LinkedIn",
+  github: "GitHub",
+  twitter: "Twitter / X",
+  instagram: "Instagram",
+  portfolio: "Portfolio",
+  other: "Other",
+};
 
 interface MemberModalProps {
   memberId: string | null;
@@ -24,6 +40,8 @@ interface MemberModalProps {
   isSaving: boolean;
 
   updateField: (key: keyof MemberFormData, value: string) => void;
+
+  updateLinks: (links: MemberLinkFormData[]) => void;
 
   setImageFile: React.Dispatch<React.SetStateAction<File | null>>;
 
@@ -41,11 +59,35 @@ const MemberModal = ({
   imagePreview,
   isSaving,
   updateField,
+  updateLinks,
   setImageFile,
   setImagePreview,
   onClose,
   onSubmit,
 }: MemberModalProps) => {
+  const addLink = () => {
+    updateLinks([...form.links, { platform: "linkedin", url: "" }]);
+  };
+
+  const removeLink = (index: number) => {
+    updateLinks(form.links.filter((_, i) => i !== index));
+  };
+
+  const editLinkPlatform = (
+    index: number,
+    platform: MemberLinkFormData["platform"]
+  ) => {
+    updateLinks(
+      form.links.map((link, i) => (i === index ? { ...link, platform } : link))
+    );
+  };
+
+  const editLinkUrl = (index: number, url: string) => {
+    updateLinks(
+      form.links.map((link, i) => (i === index ? { ...link, url } : link))
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-xl p-6 max-h-[90vh] overflow-y-auto">
@@ -261,6 +303,83 @@ const MemberModal = ({
 
             {errors.skills && (
               <p className="mt-1 text-xs text-red-400">{errors.skills}</p>
+            )}
+          </div>
+
+          {/* Social Links */}
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] uppercase tracking-widest text-neutral-500 font-black">
+                Social Links
+                <span className="ml-1 normal-case tracking-normal text-neutral-600">
+                  (optional)
+                </span>
+              </label>
+
+              <button
+                type="button"
+                onClick={addLink}
+                className="flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add link
+              </button>
+            </div>
+
+            {form.links.length === 0 ? (
+              <p className="text-xs text-neutral-600 mt-2">
+                No social links added yet.
+              </p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {form.links.map((link, index) => (
+                  <div key={index} className="flex gap-2">
+                    <select
+                      value={link.platform}
+                      onChange={(e) =>
+                        editLinkPlatform(
+                          index,
+                          e.target.value as MemberLinkFormData["platform"]
+                        )
+                      }
+                      className="w-32 shrink-0 rounded-xl bg-white/5 border border-white/10 px-3 py-2.5 text-white text-xs focus:outline-none focus:border-white/20"
+                    >
+                      {SOCIAL_PLATFORMS.map((platform) => (
+                        <option
+                          key={platform}
+                          value={platform}
+                          className="bg-[#0A0A0A]"
+                        >
+                          {PLATFORM_LABELS[platform]}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      value={link.url}
+                      onChange={(e) => editLinkUrl(index, e.target.value)}
+                      placeholder="https://..."
+                      className={`flex-1 min-w-0 rounded-xl bg-white/5 border px-4 py-2.5 text-white text-sm focus:outline-none transition ${
+                        errors[`links.${index}.url`]
+                          ? "border-red-500"
+                          : "border-white/10 focus:border-white/20"
+                      }`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => removeLink(index)}
+                      className="shrink-0 p-2.5 rounded-xl border border-white/10 text-neutral-500 hover:text-red-400 hover:border-red-500/30 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {errors.links && (
+              <p className="mt-1 text-xs text-red-400">{errors.links}</p>
             )}
           </div>
 

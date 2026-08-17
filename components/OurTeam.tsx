@@ -49,6 +49,7 @@ const OurTeam = ({ advisors, members, alumni }: OurTeamProps) => {
               designation={advisor.designation ?? undefined}
               label="Club Advisor"
               img={advisor.imageUrl}
+              links={advisor.links}
               accent="blue"
               size="advisor"
               delay={idx * 100}
@@ -71,9 +72,9 @@ const OurTeam = ({ advisors, members, alumni }: OurTeamProps) => {
                 designation={member.designation ?? undefined}
                 label="Core Member"
                 img={member.imageUrl}
+                links={member.links}
                 accent="purple"
                 size="member"
-                linkedin={member.link || undefined}
                 delay={(idx % 4) * 50}
               />
             ))}
@@ -91,6 +92,7 @@ const OurTeam = ({ advisors, members, alumni }: OurTeamProps) => {
                 designation={member.designation ?? undefined}
                 label="Alumnus"
                 img={member.imageUrl}
+                links={member.links}
                 accent="purple"
                 size="member"
                 delay={(idx % 4) * 50}

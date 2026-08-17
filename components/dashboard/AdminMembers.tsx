@@ -7,7 +7,16 @@ import axios from "axios";
 
 import { Pagination } from "@/components/ui/Pagination";
 import Popup from "../ui/Popup";
-import MemberModal from "../ui/MemberModal";
+import MemberModal, {
+  MemberFormData,
+  MemberLinkFormData,
+} from "../ui/MemberModal";
+import { SocialIcon } from "../ui/SocialIcon";
+
+export interface MemberLink {
+  platform: string;
+  url: string;
+}
 
 export interface Member {
   id: string;
@@ -18,6 +27,7 @@ export interface Member {
   designation: string | null;
   year: string | null;
   skills: string[];
+  links: MemberLink[];
   imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
@@ -72,16 +82,6 @@ const useAdminList = <T,>(url: string) => {
 
 type FieldErrors = Record<string, string>;
 
-type MemberFormData = {
-  name: string;
-  email: string;
-  phone: string;
-  role: Role;
-  year: string;
-  designation: string;
-  skills: string;
-};
-
 export type PopupType = "success" | "error" | "confirm";
 
 interface PopupState {
@@ -120,6 +120,7 @@ const EMPTY_FORM: MemberFormData = {
   year: "",
   designation: "",
   skills: "",
+  links: [],
 };
 
 interface MemberCardProps {
@@ -129,8 +130,8 @@ interface MemberCardProps {
 }
 
 const MemberCard = ({ member, onEdit, onDelete }: MemberCardProps) => (
-  <div className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-white/20">
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#111]">
+  <div className="group h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-white/20">
+    <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-[#111] flex flex-col">
       <div className="relative aspect-[4/5] overflow-hidden">
         <img
           src={member.imageUrl ?? "/placeholder.jpg"}
@@ -183,6 +184,24 @@ const MemberCard = ({ member, onEdit, onDelete }: MemberCardProps) => (
             </span>
           )}
         </div>
+
+        {member.links.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {member.links.map((link) => (
+              <a
+                key={link.platform}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={link.platform}
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-lg bg-white/5 text-neutral-400 hover:bg-white/10 hover:text-white transition"
+              >
+                <SocialIcon platform={link.platform} className="w-3.5 h-3.5" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   </div>
@@ -285,6 +304,13 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
     }));
   };
 
+  const updateLinks = (links: MemberLinkFormData[]) => {
+    setForm((prev) => ({
+      ...prev,
+      links,
+    }));
+  };
+
   const openAdd = () => {
     setForm({ ...EMPTY_FORM, role: Role[role] });
     setErrors({});
@@ -306,6 +332,10 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
       year: member.year ?? "",
       designation: member.designation ?? "",
       skills: (member.skills ?? []).join(", "),
+      links: (member.links ?? []).map((link) => ({
+        platform: (link.platform as MemberLinkFormData["platform"]) ?? "other",
+        url: link.url,
+      })),
     });
 
     setImagePreview(member.imageUrl ?? null);
@@ -342,6 +372,15 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
             .split(",")
             .map((skill) => skill.trim())
             .filter(Boolean)
+        )
+      );
+
+      fd.append(
+        "links",
+        JSON.stringify(
+          form.links
+            .map((link) => ({ platform: link.platform, url: link.url.trim() }))
+            .filter((link) => link.url.length > 0)
         )
       );
 
@@ -526,6 +565,7 @@ const AdminMembers = ({ role = "MEMBER" }: AdminMembersProps) => {
           imagePreview={imagePreview}
           isSaving={isSaving}
           updateField={updateField}
+          updateLinks={updateLinks}
           setImageFile={setImageFile}
           setImagePreview={setImagePreview}
           onClose={() => setShowModal(false)}

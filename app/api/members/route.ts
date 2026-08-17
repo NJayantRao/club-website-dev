@@ -2,10 +2,11 @@ import { NextRequest } from "next/server";
 import uploadImageToCloudinary from "@/lib/upload-image-cloudinary";
 import prisma from "@/lib/prisma";
 import { requireAdminAuth } from "@/lib/authorize-admin";
-import { MediaUsageType, Role } from "@prisma/client";
+import { MediaUsageType } from "@prisma/client";
 import { revalidateTag } from "next/cache";
 import { attachMedia } from "@/lib/media";
-
+import { validateFormData } from "@/lib/utils";
+import { createMemberSchema } from "@/lib/validator";
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAdminAuth();
@@ -14,39 +15,23 @@ export async function POST(request: NextRequest) {
       return auth.response;
     }
 
-    const formData = await request.formData();
+    const validation = await validateFormData(request, createMemberSchema);
 
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const phone = (formData.get("phone") as string | null) ?? null;
-    const role = (formData.get("role") as Role) || undefined;
-    const year = (formData.get("year") as string | null) ?? null;
-    const designation = (formData.get("designation") as string | null) ?? null;
-    const image = formData.get("image") as File | null;
-    const skills = JSON.parse(
-      (formData.get("skills") as string) || "[]"
-    ) as string[];
+    if (!validation.success) {
+      return validation.response;
+    }
 
-    if (!name || !email) {
-      return Response.json(
-        {
-          success: false,
-          message: "Name and Email are required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-    if (role !== Role.ADVISOR && skills.length === 0) {
-      return Response.json(
-        {
-          success: false,
-          message: "At least one skill is required.",
-        },
-        { status: 400 }
-      );
-    }
+    const {
+      name,
+      email,
+      phone,
+      role,
+      year,
+      designation,
+      skills,
+      links,
+      image,
+    } = validation.data;
 
     let imageUrl: string | null = null;
     let imagePublicId: string | null = null;
@@ -62,13 +47,23 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           email,
-          phone,
+          phone: phone ?? null,
           role,
-          year,
-          designation,
-          skills,
+          year: year ?? null,
+          designation: designation ?? null,
+          skills: skills ?? [],
         },
       });
+
+      if (links && links.length) {
+        await tx.memberLink.createMany({
+          data: links.map((link) => ({
+            memberId: created.id,
+            platform: link.platform,
+            url: link.url,
+          })),
+        });
+      }
 
       if (imageUrl) {
         await attachMedia(
@@ -89,7 +84,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: `${member.name} registered successfully`,
-        member: { ...member, imageUrl },
+        member: { ...member, imageUrl, links: links ?? [] },
       },
       {
         status: 201,
