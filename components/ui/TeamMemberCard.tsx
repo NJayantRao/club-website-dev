@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
 import { ArrowUpRight } from "lucide-react";
-import { SocialIcon } from "./SocialIcon";
 
 export type TeamMemberCardSize = "advisor" | "member";
 
@@ -50,8 +49,6 @@ export default function TeamMemberCard({
   const [src, setSrc] = useState<string>(() => resolveSrc(img, name));
 
   const linkedin = links.find((link) => link.platform === "linkedin");
-  const otherLinks = links.filter((link) => link.platform !== "linkedin");
-  const hasOtherLinks = otherLinks.length > 0;
 
   useEffect(() => {
     setSrc(resolveSrc(img, name));
@@ -63,12 +60,33 @@ export default function TeamMemberCard({
 
   const wrapperClass = useMemo(
     () =>
-      `group relative p-1 rounded-[2.5rem] bg-linear-to-b from-white/10 to-transparent ${accentHoverClass[accent]} transition-all duration-500 tilt-card min-h-120`,
-    [accent]
+      `group relative p-1 rounded-[2.5rem] bg-linear-to-b from-white/10 to-transparent ${accentHoverClass[accent]} transition-all duration-500 tilt-card min-h-120 ${
+        linkedin ? "cursor-pointer" : ""
+      }`,
+    [accent, linkedin]
   );
 
+  const goToLinkedin = () => {
+    if (linkedin) {
+      window.open(linkedin.url, "_blank", "noopener,noreferrer");
+    }
+  };
+
   return (
-    <div data-aos="fade-up" data-aos-delay={delay} className={wrapperClass}>
+    <div
+      data-aos="fade-up"
+      data-aos-delay={delay}
+      className={wrapperClass}
+      role={linkedin ? "link" : undefined}
+      tabIndex={linkedin ? 0 : undefined}
+      onClick={goToLinkedin}
+      onKeyDown={(e) => {
+        if (linkedin && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          goToLinkedin();
+        }
+      }}
+    >
       {linkedin && (
         <a
           href={linkedin.url}
@@ -107,25 +125,6 @@ export default function TeamMemberCard({
               {designation}
             </p>
           )}
-
-        {hasOtherLinks && (
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            {otherLinks.map((link) => (
-              <a
-                key={link.platform}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`${name} on ${link.platform}`}
-                title={link.platform}
-                onClick={(e) => e.stopPropagation()}
-                className="p-3 rounded-xl bg-white/5 text-neutral-300 hover:bg-white/10 hover:text-white hover:scale-110 transition-all duration-200"
-              >
-                <SocialIcon platform={link.platform} className="w-5 h-5" />
-              </a>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
