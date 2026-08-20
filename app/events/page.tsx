@@ -1,5 +1,5 @@
-import Events from "@/components/Events";
-import { getEvents } from "@/lib/events";
+import Events from "@/features/events/components/Events";
+import { getEvents } from "@/features/events/actions/events";
 
 export const revalidate = 84600;
 

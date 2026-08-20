@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { Trophy } from "lucide-react";
 
-import AchievementsSection from "@/components/ui/AchievementsSection";
-import GallerySection from "@/components/ui/GallerySection";
-import type { AchievementItem } from "@/lib/achievements";
+import AchievementsSection from "./AchievementsSection";
+import GallerySection from "./GallerySection";
+import type { AchievementItem } from "../actions/achievements";
 
 const tabs = [
   { id: "achievements", label: "Achievements" },

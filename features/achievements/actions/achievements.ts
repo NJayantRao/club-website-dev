@@ -46,5 +46,5 @@ export const getAchievements = unstable_cache(
     });
   },
   ["achievements-list"],
-  { tags: ["achievements"] }
+  { tags: ["achievements"], revalidate: 86400 }
 );

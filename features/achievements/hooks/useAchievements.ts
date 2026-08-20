@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { AchievementItem } from "@/lib/achievements";
+import type { AchievementItem } from "../actions/achievements";
 
 interface FetchAchievementsParams {
   page?: number;

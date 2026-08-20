@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { useGallery } from "@/hooks/useGallery";
+import { useGallery } from "../hooks/useGallery";
 import { Pagination } from "@/components/ui/Pagination";
 import ImageLightbox from "./ImageBox";
 

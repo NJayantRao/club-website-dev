@@ -2,9 +2,9 @@ import prisma from "@/lib/prisma";
 import { MediaUsageType, Role } from "@prisma/client";
 import { unstable_cache } from "next/cache";
 import { getMediaUrlMap } from "@/lib/media";
-import { MemberSocialLink } from "@/lib/members";
+import { MemberSocialLink } from "./members";
 
-export interface AdvisorItem {
+export interface AlumniItem {
   id: string;
   name: string;
   role: string;
@@ -13,11 +13,11 @@ export interface AdvisorItem {
   links: MemberSocialLink[];
 }
 
-export const getAdvisors = unstable_cache(
-  async (): Promise<AdvisorItem[]> => {
-    const advisors = await prisma.member.findMany({
+export const getAlumni = unstable_cache(
+  async (): Promise<AlumniItem[]> => {
+    const alumni = await prisma.member.findMany({
       where: {
-        role: Role.ADVISOR,
+        role: Role.ALUMNI,
       },
       select: {
         id: true,
@@ -35,18 +35,18 @@ export const getAdvisors = unstable_cache(
 
     const imageMap = await getMediaUrlMap(
       MediaUsageType.PROFILE,
-      advisors.map((advisor) => advisor.id)
+      alumni.map((member) => member.id)
     );
 
-    return advisors.map((advisor) => ({
-      id: advisor.id,
-      name: advisor.name,
-      role: advisor.role,
-      designation: advisor.designation,
-      imageUrl: imageMap.get(advisor.id) ?? null,
-      links: advisor.links,
+    return alumni.map((member) => ({
+      id: member.id,
+      name: member.name,
+      role: member.role,
+      designation: member.designation,
+      imageUrl: imageMap.get(member.id) ?? null,
+      links: member.links,
     }));
   },
-  ["advisors-list"],
+  ["alumni-list"],
   { tags: ["members"], revalidate: 86400 }
 );

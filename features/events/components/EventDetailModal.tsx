@@ -5,7 +5,7 @@ import { Calendar, Clock, MapPin, Users, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { EventStatusType } from "@prisma/client";
 
-import type { EventItem } from "@/lib/events";
+import type { EventItem } from "../actions/events";
 import ImageCarousel from "./Imagecarousal";
 
 interface EventDetailsModalProps {

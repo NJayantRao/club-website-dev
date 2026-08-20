@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import SectionHeading from "@/components/ui/SectionHeading";
-import TeamToggle from "@/components/ui/TeamToggle";
-import TeamMemberCard from "@/components/ui/TeamMemberCard";
-import { AdvisorItem } from "@/lib/advisors";
-import { MemberItem } from "@/lib/members";
-import { AlumniItem } from "@/lib/alumni";
+import SectionHeading from "./SectionHeading";
+import TeamToggle from "./TeamToggle";
+import TeamMemberCard from "./TeamMemberCard";
+import { AdvisorItem } from "../actions/advisors";
+import { MemberItem } from "../actions/members";
+import { AlumniItem } from "../actions/alumni";
 
 interface OurTeamProps {
   advisors: AdvisorItem[];

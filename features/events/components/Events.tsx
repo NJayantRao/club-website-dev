@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { EventItem } from "@/lib/events";
+import { EventItem } from "../actions/events";
 import { EventStatusType } from "@prisma/client";
-import ImageCarousel from "./ui/Imagecarousal";
+import ImageCarousel from "./Imagecarousal";
 
 interface EventsProps {
   events?: EventItem[];

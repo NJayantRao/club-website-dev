@@ -7,8 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Pagination } from "@/components/ui/Pagination";
 import ImageLightbox from "./ImageBox";
-import { useAchievements } from "@/hooks/useAchievements";
-import type { AchievementItem } from "@/lib/achievements";
+import { useAchievements } from "../hooks/useAchievements";
+import type { AchievementItem } from "../actions/achievements";
 
 const LIMIT = 9;
 
