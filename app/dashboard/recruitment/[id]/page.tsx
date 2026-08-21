@@ -4,10 +4,9 @@ import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, FileText, Settings, ClipboardList } from "lucide-react";
-
-import RecruitmentFields from "@/components/ui/RecruitmentFields";
-import RecruitmentResponses from "@/components/ui/RecruitmentResponses";
-import RecruitmentSettings from "@/components/ui/RecruitmentSettings";
+import RecruitmentResponses from "@/features/admin-dashboard/recruitment/components/RecruitmentResponses";
+import RecruitmentFields from "@/features/admin-dashboard/recruitment/components/RecruitmentFields";
+import RecruitmentSettings from "@/features/admin-dashboard/recruitment/components/RecruitmentSettings";
 
 const tabs = [
   {

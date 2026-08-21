@@ -1,5 +1,5 @@
-import { getAchievements } from "@/lib/achievements";
-import Achievements from "@/components/Achievements";
+import { getAchievements } from "@/features/achievements/actions/achievements";
+import Achievements from "@/features/achievements/components/Achievements";
 
 export const revalidate = 86400;
 

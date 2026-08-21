@@ -1,7 +1,7 @@
-import OurTeam from "@/components/OurTeam";
-import { getAdvisors } from "@/lib/advisors";
-import { getAlumni } from "@/lib/alumni";
-import { getMembers } from "@/lib/members";
+import OurTeam from "@/features/our-team/components/OurTeam";
+import { getAdvisors } from "@/features/our-team/actions/advisors";
+import { getAlumni } from "@/features/our-team/actions/alumni";
+import { getMembers } from "@/features/our-team/actions/members";
 
 export const revalidate = 86400;
 
