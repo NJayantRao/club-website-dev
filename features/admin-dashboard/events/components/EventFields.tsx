@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { FieldType } from "@prisma/client";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import FieldModal from "./FieldModal";
-import Popup from "./Popup";
+import FieldModal from "../../shared/components/FieldModal";
+import Popup from "../../shared/components/Popup";
 
 interface Props {
   id: string;

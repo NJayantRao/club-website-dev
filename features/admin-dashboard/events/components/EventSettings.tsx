@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
-import Popup from "./Popup";
+import Popup from "../../shared/components/Popup";
 
 interface EventSettingsProps {
   id: string;

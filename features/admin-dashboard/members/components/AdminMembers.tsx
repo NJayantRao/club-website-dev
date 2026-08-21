@@ -6,12 +6,9 @@ import { Role } from "@prisma/client";
 import axios from "axios";
 
 import { Pagination } from "@/components/ui/Pagination";
-import Popup from "../ui/Popup";
-import MemberModal, {
-  MemberFormData,
-  MemberLinkFormData,
-} from "../ui/MemberModal";
-import { SocialIcon } from "../ui/SocialIcon";
+import Popup, { PopupType } from "../../shared/components/Popup";
+import MemberModal, { MemberFormData, MemberLinkFormData } from "./MemberModal";
+import { SocialIcon } from "./SocialIcon";
 
 export interface MemberLink {
   platform: string;
@@ -81,8 +78,6 @@ const useAdminList = <T,>(url: string) => {
 };
 
 type FieldErrors = Record<string, string>;
-
-export type PopupType = "success" | "error" | "confirm";
 
 interface PopupState {
   show: boolean;

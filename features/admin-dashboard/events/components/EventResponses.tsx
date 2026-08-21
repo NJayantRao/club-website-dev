@@ -9,23 +9,32 @@ import {
   XCircle,
   Trash2,
   Search,
+  Users,
   Mail,
   Phone,
-  Hash,
-  BookOpen,
-  Code,
+  GraduationCap,
   Inbox,
   Pencil,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
-import Popup from "./Popup";
-import EditRecruitmentResponseModal, {
-  RecruitmentFormFieldLite as EditableFormField,
-  RecruitmentResponseRecord,
-} from "./EditRecruitmentResponseModal";
+import Popup from "../../shared/components/Popup";
+import EditResponseModal, {
+  EventFormFieldLite as EditableFormField,
+} from "./EditResponseModal";
 
-interface RecruitmentResponsesProps {
+interface EventResponsesProps {
   id: string;
+}
+
+interface EventResponseItem {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  college: string | null;
+  attendance: boolean;
+  answers: Record<string, unknown>;
+  createdAt: string;
 }
 
 interface PaginationInfo {
@@ -37,7 +46,7 @@ interface PaginationInfo {
 
 const LIMIT = 15;
 
-type SelectionFilter = "all" | "selected" | "pending";
+type AttendanceFilter = "all" | "attended" | "pending";
 
 function initials(name: string) {
   return name
@@ -48,17 +57,17 @@ function initials(name: string) {
     .join("");
 }
 
-const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
+const EventResponses = ({ id }: EventResponsesProps) => {
   const [page, setPage] = useState(1);
-  const [responses, setResponses] = useState<RecruitmentResponseRecord[]>([]);
+  const [responses, setResponses] = useState<EventResponseItem[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [formFields, setFormFields] = useState<EditableFormField[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<SelectionFilter>("all");
+  const [filter, setFilter] = useState<AttendanceFilter>("all");
   const [editingResponse, setEditingResponse] =
-    useState<RecruitmentResponseRecord | null>(null);
+    useState<EventResponseItem | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [popup, setPopup] = useState({
@@ -73,16 +82,16 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
     setIsLoading(true);
 
     try {
-      const [{ data: responseData }, { data: driveData }] = await Promise.all([
-        axios.get(`/api/recruitment/${id}/response`, {
+      const [{ data: responseData }, { data: eventData }] = await Promise.all([
+        axios.get(`/api/events/${id}/responses`, {
           params: { page: pageNum, limit: LIMIT },
         }),
-        axios.get(`/api/recruitment/${id}`),
+        axios.get(`/api/events/${id}`),
       ]);
 
       setResponses(responseData.data ?? []);
       setPagination(responseData.pagination ?? null);
-      setFormFields(driveData.drive?.formFields ?? []);
+      setFormFields(eventData.event?.formFields ?? []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -94,10 +103,10 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
     load(page);
   }, [id, page]);
 
-  const toggleSelection = async (response: RecruitmentResponseRecord) => {
+  const toggleAttendance = async (response: EventResponseItem) => {
     try {
-      await axios.patch(`/api/recruitment/${id}/response/${response.id}`, {
-        isSelected: !response.isSelected,
+      await axios.patch(`/api/events/${id}/responses/${response.id}`, {
+        attendance: !response.attendance,
       });
       await load(page);
     } catch (err) {
@@ -107,14 +116,18 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
 
   const saveResponseEdit = async (
     responseId: string,
-    updates: Record<string, unknown>
+    updates: {
+      name: string;
+      email: string;
+      phone: string | null;
+      college: string | null;
+      attendance: boolean;
+      answers: Record<string, string>;
+    }
   ) => {
     setIsSavingEdit(true);
     try {
-      await axios.patch(
-        `/api/recruitment/${id}/response/${responseId}`,
-        updates
-      );
+      await axios.patch(`/api/events/${id}/responses/${responseId}`, updates);
       setEditingResponse(null);
       await load(page);
     } catch (err) {
@@ -131,20 +144,20 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
     }
   };
 
-  const deleteResponse = async (response: RecruitmentResponseRecord) => {
+  const deleteResponse = async (response: EventResponseItem) => {
     try {
-      await axios.delete(`/api/recruitment/${id}/response/${response.id}`);
+      await axios.delete(`/api/events/${id}/responses/${response.id}`);
       await load(page);
     } catch (err) {
       console.error(err);
     }
   };
 
-  const confirmDelete = (response: RecruitmentResponseRecord) => {
+  const confirmDelete = (response: EventResponseItem) => {
     setPopup({
       show: true,
       type: "success",
-      message: `Delete the application from ${response.name}?`,
+      message: `Delete the response from ${response.name}?`,
       isConfirm: true,
       onConfirm: () => {
         deleteResponse(response);
@@ -156,8 +169,8 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
   const labelFor = (fieldName: string) =>
     formFields.find((f) => f.name === fieldName)?.label ?? fieldName;
 
-  const selectedOnPage = useMemo(
-    () => responses.filter((r) => r.isSelected).length,
+  const attendedOnPage = useMemo(
+    () => responses.filter((r) => r.attendance).length,
     [responses]
   );
 
@@ -165,17 +178,15 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
     const q = query.trim().toLowerCase();
 
     return responses.filter((r) => {
-      if (filter === "selected" && !r.isSelected) return false;
-      if (filter === "pending" && r.isSelected) return false;
+      if (filter === "attended" && !r.attendance) return false;
+      if (filter === "pending" && r.attendance) return false;
 
       if (!q) return true;
 
       return (
         r.name.toLowerCase().includes(q) ||
-        r.personalEmail.toLowerCase().includes(q) ||
-        r.nistEmail.toLowerCase().includes(q) ||
-        r.rollNumber.toLowerCase().includes(q) ||
-        r.registrationNo.toLowerCase().includes(q)
+        r.email.toLowerCase().includes(q) ||
+        (r.college?.toLowerCase().includes(q) ?? false)
       );
     });
   }, [responses, query, filter]);
@@ -203,11 +214,11 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">Applications</h2>
+          <h2 className="text-2xl font-bold text-white">Event Responses</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            {pagination?.total ?? responses.length} total application
+            {pagination?.total ?? responses.length} total registration
             {(pagination?.total ?? responses.length) === 1 ? "" : "s"} ·{" "}
-            {selectedOnPage} selected on this page
+            {attendedOnPage} attended on this page
           </p>
         </div>
 
@@ -215,9 +226,9 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
           {(
             [
               { key: "all", label: "All" },
-              { key: "selected", label: "Selected" },
+              { key: "attended", label: "Attended" },
               { key: "pending", label: "Pending" },
-            ] as { key: SelectionFilter; label: string }[]
+            ] as { key: AttendanceFilter; label: string }[]
           ).map((tab) => (
             <button
               key={tab.key}
@@ -239,7 +250,7 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name, email, roll no., or registration no..."
+          placeholder="Search by name, email, or college..."
           className="w-full rounded-2xl border border-white/10 bg-white/[0.03] py-3 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-neutral-600 focus:border-white/20"
         />
       </div>
@@ -249,8 +260,8 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
           <Inbox className="h-8 w-8 text-neutral-700" />
           <p className="text-neutral-500">
             {responses.length === 0
-              ? "No applications yet for this drive."
-              : "No applications match your search or filter."}
+              ? "No registrations yet for this event."
+              : "No responses match your search or filter."}
           </p>
         </div>
       ) : (
@@ -273,7 +284,7 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                   <div className="flex min-w-0 items-center gap-4">
                     <div
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                        response.isSelected
+                        response.attendance
                           ? "bg-green-500/15 text-green-300 ring-1 ring-green-500/30"
                           : "bg-white/10 text-neutral-300 ring-1 ring-white/10"
                       }`}
@@ -286,7 +297,7 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                         {response.name}
                       </p>
                       <p className="truncate text-xs text-neutral-500">
-                        {response.rollNumber} · {response.branch}
+                        {response.email}
                       </p>
                     </div>
                   </div>
@@ -295,18 +306,18 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleSelection(response);
+                        toggleAttendance(response);
                       }}
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all ${
-                        response.isSelected
+                        response.attendance
                           ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
                           : "bg-white/5 text-neutral-400 hover:bg-white/10"
                       }`}
                     >
-                      {response.isSelected ? (
+                      {response.attendance ? (
                         <>
                           <CheckCircle2 className="h-3 w-3" />
-                          Selected
+                          Attended
                         </>
                       ) : (
                         <>
@@ -322,7 +333,7 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                         setEditingResponse(response);
                       }}
                       className="rounded-lg p-2 text-neutral-300 transition-all hover:bg-white/10"
-                      aria-label={`Edit application from ${response.name}`}
+                      aria-label={`Edit response from ${response.name}`}
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
@@ -333,7 +344,7 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                         confirmDelete(response);
                       }}
                       className="rounded-lg p-2 text-red-400 transition-all hover:bg-red-400/10"
-                      aria-label={`Delete application from ${response.name}`}
+                      aria-label={`Delete response from ${response.name}`}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -361,98 +372,39 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                           <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
                           <div>
                             <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                              NIST Email
+                              Email
                             </p>
-                            <p className="text-neutral-300">
-                              {response.nistEmail}
-                            </p>
+                            <p className="text-neutral-300">{response.email}</p>
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-2">
-                          <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
-                          <div>
-                            <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                              Personal Email
-                            </p>
-                            <p className="text-neutral-300">
-                              {response.personalEmail}
-                            </p>
+                        {response.phone && (
+                          <div className="flex items-start gap-2">
+                            <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
+                            <div>
+                              <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
+                                Phone
+                              </p>
+                              <p className="text-neutral-300">
+                                {response.phone}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
-                        <div className="flex items-start gap-2">
-                          <Phone className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
-                          <div>
-                            <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                              Phone
-                            </p>
-                            <p className="text-neutral-300">
-                              {response.phoneNumber}
-                            </p>
+                        {response.college && (
+                          <div className="flex items-start gap-2">
+                            <GraduationCap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
+                            <div>
+                              <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
+                                College
+                              </p>
+                              <p className="text-neutral-300">
+                                {response.college}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-
-                        <div className="flex items-start gap-2">
-                          <Hash className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
-                          <div>
-                            <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                              Registration No.
-                            </p>
-                            <p className="text-neutral-300">
-                              {response.registrationNo}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                            Gender
-                          </p>
-                          <p className="text-neutral-300">{response.gender}</p>
-                        </div>
-
-                        <div>
-                          <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                            Locality
-                          </p>
-                          <p className="text-neutral-300">
-                            {response.locality}
-                          </p>
-                        </div>
-
-                        <div className="flex items-start gap-2">
-                          <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
-                          <div>
-                            <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                              Branch
-                            </p>
-                            <p className="text-neutral-300">
-                              {response.branch}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div>
-                          <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                            HackerRank ID
-                          </p>
-                          <p className="text-neutral-300">
-                            {response.hackerrankId}
-                          </p>
-                        </div>
-
-                        <div className="col-span-2 flex items-start gap-2 md:col-span-3">
-                          <Code className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-600" />
-                          <div>
-                            <p className="mb-0.5 uppercase tracking-wider text-neutral-600">
-                              Target Tech Stack
-                            </p>
-                            <p className="text-neutral-300">
-                              {response.techStack}
-                            </p>
-                          </div>
-                        </div>
+                        )}
 
                         {extraFields.map(([key, value]) => (
                           <div key={key}>
@@ -464,6 +416,11 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
                             </p>
                           </div>
                         ))}
+                      </div>
+
+                      <div className="border-t border-white/5 px-4 py-3 text-[11px] text-neutral-600">
+                        Registered on{" "}
+                        {new Date(response.createdAt).toLocaleString()}
                       </div>
                     </motion.div>
                   )}
@@ -494,7 +451,7 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
       />
 
       {editingResponse && (
-        <EditRecruitmentResponseModal
+        <EditResponseModal
           record={editingResponse}
           formFields={formFields}
           isSaving={isSavingEdit}
@@ -506,4 +463,4 @@ const RecruitmentResponses = ({ id }: RecruitmentResponsesProps) => {
   );
 };
 
-export default RecruitmentResponses;
+export default EventResponses;

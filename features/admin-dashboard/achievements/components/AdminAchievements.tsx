@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
-import Popup from "../ui/Popup";
+import Popup from "../../shared/components/Popup";
 import { AchievementType } from "@prisma/client";
 import axios from "axios";
 
@@ -124,7 +124,7 @@ const AdminAchievements: React.FC = () => {
 
     try {
       const { data } = await axios.get("/api/our-team", {
-        params: { role: "ALL", limit: 500 },
+        params: { role: "ALL", limit: 100 },
       });
 
       setMembers(

@@ -14,6 +14,8 @@ interface PopupProps {
   isConfirm?: boolean;
 }
 
+export type PopupType = "success" | "error" | "confirm";
+
 const Popup: React.FC<PopupProps> = ({
   show,
   type = "success",

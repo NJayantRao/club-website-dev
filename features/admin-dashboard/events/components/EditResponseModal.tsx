@@ -4,9 +4,9 @@ import React, { useState } from "react";
 import DynamicAnswerFields, {
   DynamicFormFieldLite,
   validateDynamicAnswers,
-} from "./form/DynamicAnswerFields";
-import EditModalShell from "./EditModelShell";
-import { SelectField, TextField } from "./FormField";
+} from "../../shared/components/DynamicAnswerFields";
+import EditModalShell from "../../shared/components/EditModelShell";
+import { SelectField, TextField } from "../../shared/components/FormField";
 
 export interface EventResponseRecord {
   id: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ReadOnlyField, TextField } from "../FormField";
+import { ReadOnlyField, TextField } from "./FormField";
 
 export interface DynamicFormFieldLite {
   name: string;

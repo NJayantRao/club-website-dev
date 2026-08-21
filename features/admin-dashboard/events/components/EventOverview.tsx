@@ -13,7 +13,7 @@ import {
   CalendarRange,
 } from "lucide-react";
 import { EventType } from "@prisma/client";
-import EditEventModal from "./ui/EditEventModal";
+import EditEventModal from "./EditEventModal";
 
 interface EventOverviewProps {
   id: string;

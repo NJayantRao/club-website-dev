@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import EditModalShell from "./EditModelShell";
-import { SelectField, TextAreaField, TextField } from "./FormField";
+import EditModalShell from "../../shared/components/EditModelShell";
+import {
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "../../shared/components/FormField";
 
 export interface ContactInquiryRecord {
   id: string;

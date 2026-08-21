@@ -5,10 +5,9 @@ import axios from "axios";
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { EventStatusType, EventType } from "@prisma/client";
 
-import Popup from "../ui/Popup";
-import EventModal, { EventFormData } from "../ui/EventModal";
+import Popup, { PopupType } from "../../shared/components/Popup";
+import EventModal, { EventFormData } from "./EventModal";
 import { Pagination } from "@/components/ui/Pagination";
-import { PopupType } from "./AdminMembers";
 import Link from "next/link";
 
 interface PopupState {

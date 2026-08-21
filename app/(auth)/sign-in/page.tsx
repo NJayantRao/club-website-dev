@@ -1,5 +1,4 @@
-import SignUp from "@/components/SignUp";
-import React from "react";
+import SignUp from "@/features/admin-dashboard/auth/components/SignUp";
 
 const page = () => {
   return (

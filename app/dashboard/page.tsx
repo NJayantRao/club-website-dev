@@ -21,13 +21,13 @@ import {
   Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import AdminMembers from "../../components/dashboard/AdminMembers";
-import AdminEvents from "../../components/dashboard/AdminEvents";
-import AdminQueries from "../../components/dashboard/AdminQueries";
-import AdminRecruitment from "../../components/dashboard/AdminRecruitment";
-import AdminAchievements from "../../components/dashboard/AdminAchievements";
-import AdminGallery from "../../components/dashboard/AdminGallery";
 import axios from "axios";
+import AdminMembers from "@/features/admin-dashboard/members/components/AdminMembers";
+import AdminEvents from "@/features/admin-dashboard/events/components/AdminEvents";
+import AdminQueries from "@/features/admin-dashboard/queries/components/AdminQueries";
+import AdminRecruitment from "@/features/admin-dashboard/recruitment/components/AdminRecruitment";
+import AdminAchievements from "@/features/admin-dashboard/achievements/components/AdminAchievements";
+import AdminGallery from "@/features/admin-dashboard/gallery/components/AdminGallery";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },

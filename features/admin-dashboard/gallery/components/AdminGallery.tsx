@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2, Pencil, X, Image as ImageIcon } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
-import Popup from "../ui/Popup";
+import Popup from "../../shared/components/Popup";
 import axios from "axios";
 
 const LIMIT = 9;

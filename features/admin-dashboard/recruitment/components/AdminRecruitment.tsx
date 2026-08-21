@@ -15,10 +15,10 @@ import {
 } from "lucide-react";
 
 import { Pagination } from "@/components/ui/Pagination";
-import Popup from "../ui/Popup";
+import Popup from "../../shared/components/Popup";
 import RecruitmentDriveModal, {
   RecruitmentDriveFormData,
-} from "../ui/RecruitmentModal";
+} from "./RecruitmentModal";
 
 const LIMIT = 9;
 

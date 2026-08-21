@@ -11,8 +11,8 @@ import {
   Pencil,
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
-import Popup from "../ui/Popup";
-import EditInquiryModal, { ContactInquiryRecord } from "../ui/EditInquiryModal";
+import Popup from "../../shared/components/Popup";
+import EditInquiryModal, { ContactInquiryRecord } from "./EditInquiryModal";
 import axios from "axios";
 
 const LIMIT = 15;

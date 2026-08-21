@@ -11,12 +11,11 @@ import {
   Settings,
   ClipboardList,
 } from "lucide-react";
-
-import EventOverview from "@/components/EventOverview";
-import EventAnalytics from "@/components/ui/EventAnalytics";
-import EventFields from "@/components/ui/EventFields";
-import EventResponses from "@/components/ui/EventResponses";
-import EventSettings from "@/components/ui/EventSettings";
+import EventOverview from "@/features/admin-dashboard/events/components/EventOverview";
+import EventFields from "@/features/admin-dashboard/events/components/EventFields";
+import EventResponses from "@/features/admin-dashboard/events/components/EventResponses";
+import EventAnalytics from "@/features/admin-dashboard/events/components/EventAnalytics";
+import EventSettings from "@/features/admin-dashboard/events/components/EventSettings";
 
 const tabs = [
   {

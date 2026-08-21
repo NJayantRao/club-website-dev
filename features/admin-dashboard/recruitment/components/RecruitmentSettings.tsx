@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { Loader2, Lock, Unlock } from "lucide-react";
-import Popup from "./Popup";
-import { SelectField, TextAreaField, TextField } from "./FormField";
+import Popup from "../../shared/components/Popup";
+import {
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "../../shared/components/FormField";
 
 interface RecruitmentSettingsProps {
   id: string;
