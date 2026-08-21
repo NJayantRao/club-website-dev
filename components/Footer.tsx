@@ -1,6 +1,6 @@
 "use client";
 import { Mail, MapPin } from "lucide-react";
-import { FaXTwitter } from "react-icons/fa6";
+import { FaDiscord, FaXTwitter } from "react-icons/fa6";
 import { FiFacebook, FiInstagram, FiLinkedin } from "react-icons/fi";
 import Link from "next/link";
 import Image from "next/image";
@@ -66,6 +66,14 @@ const Footer = () => {
               >
                 <FiFacebook className="w-4 h-4" />
               </a>
+              <a
+                href="https://discord.gg/XVja38tU"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-neutral-400 hover:bg-white hover:text-black hover:border-white transition-all hover-trigger"
+              >
+                <FaDiscord className="w-4 h-4" />
+              </a>
             </div>
           </div>
           <div>
@@ -122,7 +130,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-neutral-600">
-          <p>© 2024 Club Excel. Built for the future.</p>
+          <p>© {new Date().getFullYear()} Club Excel. Built for the future.</p>
           <div className="flex gap-6">
             <a href="#" className="hover:text-neutral-400">
               Privacy
