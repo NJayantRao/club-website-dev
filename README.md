@@ -112,7 +112,7 @@ The Club Excel website serves as a dynamic platform for managing club activities
 
 ## Project Structure 📂
 
-The project follows a standard Next.js directory structure:
+The project uses a **feature-based architecture** for anything specific to a page or domain, layered on top of the standard Next.js `app/` router. Routing, data models, and truly cross-cutting infrastructure stay in their conventional top-level folders; everything else lives under `features/<name>/`.
 
 ```
 club-website-dev/
@@ -170,6 +170,9 @@ club-website-dev/
 │   │   ├── events/
 │   │   │   └── [id]/
 │   │   │       └── page.tsx
+│   │   ├── recruitment/
+│   │   │   └── [id]/
+│   │   │       └── page.tsx
 │   │   └── page.tsx
 │   ├── events/
 │   │   ├── [id]/
@@ -179,66 +182,112 @@ club-website-dev/
 │   ├── our-team/
 │   │   └── page.tsx
 │   ├── page.tsx
-│   └── recruitment/
-│       └── page.tsx
+│   ├── recruitment/
+│   │   └── page.tsx
 │   ├── globals.css
 │   └── layout.tsx
-├── components/
-│   ├── Achievements.tsx
-│   ├── ContactUs.tsx
-│   ├── EventOverview.tsx
-│   ├── Events.tsx
+├── components/                    # Site-wide chrome + genuinely shared UI atoms only
 │   ├── Footer.tsx
-│   ├── Home.tsx
+│   ├── Home.tsx                   # Composes features/home/components/*
 │   ├── Layout.tsx
 │   ├── Navbar.tsx
-│   ├── OurTeam.tsx
 │   ├── Recruitment.tsx
-│   ├── SignUp.tsx
-│   ├── dashboard/
-│   │   ├── AdminAchievements.tsx
-│   │   ├── AdminEvents.tsx
-│   │   ├── AdminGallery.tsx
-│   │   ├── AdminMembers.tsx
-│   │   ├── AdminQueries.tsx
-│   │   └── AdminRecruitment.tsx
+│   ├── RecruitmentClosed.tsx
 │   └── ui/
-│       ├── AchievementsSection.tsx
-│       ├── EditEventModal.tsx
-│       ├── EventAnalytics.tsx
-│       ├── EventDetailModal.tsx
-│       ├── EventFields.tsx
-│       ├── EventModal.tsx
-│       ├── EventResponses.tsx
-│       ├── EventSettings.tsx
-│       ├── FieldModal.tsx
-│       ├── ImageBox.tsx
-│       ├── Imagecarousal.tsx
-│       ├── MemberModal.tsx
-│       ├── Pagination.tsx
-│       ├── Popup.tsx
-│       ├── SectionHeading.tsx
-│       ├── TeamHero.tsx
-│       ├── TeamMemberCard.tsx
-│       ├── TeamTabs.tsx
-│       └── TeamToggle.tsx
+│       └── Pagination.tsx         # Shared across public (achievements/gallery) AND admin
+├── features/
+│   ├── home/
+│   │   ├── actions/
+│   │   └── components/
+│   │       ├── AboutSections.tsx
+│   │       ├── Domains.tsx
+│   │       ├── HeroSection.tsx
+│   │       └── Portal.tsx
+│   ├── events/
+│   │   ├── actions/
+│   │   │   └── events.ts
+│   │   └── components/
+│   │       ├── Events.tsx
+│   │       ├── Imagecarousal.tsx
+│   │       └── EventDetailModal.tsx
+│   ├── contact-us/
+│   │   └── components/
+│   │       └── ContactUs.tsx
+│   ├── our-team/
+│   │   ├── actions/
+│   │   │   ├── advisors.ts
+│   │   │   ├── alumni.ts
+│   │   │   └── members.ts
+│   │   └── components/
+│   │       ├── OurTeam.tsx
+│   │       ├── SectionHeading.tsx
+│   │       ├── TeamHero.tsx
+│   │       ├── TeamMemberCard.tsx
+│   │       ├── TeamTabs.tsx
+│   │       └── TeamToggle.tsx
+│   ├── achievements/               # Also covers the Gallery tab — no separate public route exists for it
+│   │   ├── actions/
+│   │   │   └── achievements.ts
+│   │   ├── components/
+│   │   │   ├── Achievements.tsx
+│   │   │   ├── AchievementsSection.tsx
+│   │   │   ├── GallerySection.tsx
+│   │   │   └── ImageBox.tsx
+│   │   └── hooks/
+│   │       ├── useAchievements.ts
+│   │       └── useGallery.ts
+│   └── dashboard/                  # Admin panel, split by sub-domain
+│       ├── shared/components/      # Cross-domain admin building blocks (Popup, form fields, edit-modal shell...)
+│       │   ├── DynamicAnswerFields.tsx
+│       │   ├── EditModelShell.tsx
+│       │   ├── FieldModal.tsx
+│       │   ├── FormField.tsx
+│       │   └── Popup.tsx
+│       ├── auth/components/
+│       │   └── SignUp.tsx
+│       ├── members/components/
+│       │   ├── AdminMembers.tsx
+│       │   ├── MemberModal.tsx
+│       │   └── SocialIcon.tsx
+│       ├── events/components/
+│       │   ├── AdminEvents.tsx
+│       │   ├── EditEventModal.tsx
+│       │   ├── EditResponseModal.tsx
+│       │   ├── EventAnalytics.tsx
+│       │   ├── EventFields.tsx
+│       │   ├── EventModal.tsx
+│       │   ├── EventOverview.tsx
+│       │   ├── EventResponses.tsx
+│       │   └── EventSettings.tsx
+│       ├── recruitment/components/
+│       │   ├── AdminRecruitment.tsx
+│       │   ├── EditRecruitmentResponseModal.tsx
+│       │   ├── RecruitmentFields.tsx
+│       │   ├── RecruitmentModal.tsx
+│       │   ├── RecruitmentResponses.tsx
+│       │   └── RecruitmentSettings.tsx
+│       ├── queries/components/
+│       │   ├── AdminQueries.tsx
+│       │   └── EditInquiryModal.tsx
+│       ├── gallery/components/
+│       │   └── AdminGallery.tsx
+│       └── achievements/components/
+│           └── AdminAchievements.tsx
 ├── context/
 │   └── AuthProvider.tsx
-├── hooks/
-│   ├── useAchievements.ts
-│   ├── useGallery.ts
+├── hooks/                          # Only hooks shared across multiple features live here
 │   └── useRecruitments.ts
-├── lib/
-│   ├── achievements.ts
-│   ├── advisors.ts
-│   ├── alumni.ts
+├── lib/                            # Cross-cutting infrastructure: DB client, auth, uploads, shared validators/utils
 │   ├── authorize-admin.ts
 │   ├── cloudinary.ts
-│   ├── events.ts
-│   ├── members.ts
+│   ├── destroy-cloudinary-image.ts
+│   ├── media.ts
 │   ├── prisma.ts
+│   ├── recruitment-status.ts
 │   ├── upload-image-cloudinary.ts
-│   └── upload-local-cloudinary.ts
+│   ├── upload-local-cloudinary.ts
+│   ├── utils.ts
+│   └── validator.ts
 ├── next-env.d.ts
 ├── next.config.ts
 ├── package.json
@@ -250,7 +299,6 @@ club-website-dev/
 │   ├── migrations/
 │   │
 │   └── schema.prisma
-├── proxy.ts
 ├── scripts/
 │   ├── admin-signup.ts
 │   ├── seed-member-links.ts
@@ -260,6 +308,25 @@ club-website-dev/
 └── types/
     └── next-auth.d.ts
 ```
+
+### Feature folder conventions
+
+Each folder under `features/<name>/` holds everything specific to that page or domain, divided by role:
+
+- **`components/`** — UI pieces used only by that feature (page sections, modals, cards).
+- **`actions/`** — server-side data-fetching functions (e.g. `unstable_cache`-wrapped Prisma queries), analogous to the data layer the old top-level `lib/` folder used to hold per-domain.
+- **`hooks/`** — client hooks used only within that feature.
+
+A subfolder only exists if that feature actually has something to put in it — e.g. `contact-us` has no `actions/` or `hooks/` since its form posts directly to an API route with no server-side fetch of its own.
+
+**What stays outside `features/`:**
+
+- **`app/`** — routing is a Next.js convention, not a feature concern. Route `page.tsx`/`route.ts` files stay put and simply import from the relevant `features/<name>/components` or `features/<name>/actions`.
+- **`components/`** (top level) — site-wide chrome (`Navbar`, `Footer`, `Layout`) and UI atoms genuinely shared across _multiple_ features or between the public site and the admin dashboard (e.g. `Pagination.tsx`, used by both the public achievements/gallery pages and every admin list view).
+- **`lib/`** — infrastructure with no single feature owner: the Prisma client, admin-auth checks used by API routes across every domain, Cloudinary upload/delete helpers, shared validators.
+- **`hooks/`** (top level) — hooks used by more than one feature (`useRecruitments` is read by both the home page's hero section and the public recruitment flow).
+
+Within `features/dashboard/`, the same pattern repeats one level deeper: each admin sub-domain (`members`, `events`, `recruitment`, `queries`, `gallery`, `achievements`, `auth`) gets its own `components/`, and anything genuinely used across _multiple_ admin sub-domains (`Popup`, the edit-modal shell, shared form fields) lives in `features/dashboard/shared/components/` rather than being duplicated or forcing one domain to import from another's folder.
 
 ## API Reference 🔗
 
@@ -331,7 +398,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## License 📄
 
-No license information was found in the repository. Please consider adding a LICENSE file to specify the terms under which this project can be used and distributed.
+[LICENSE](LICENSE)
 
 ## Important Links 🌐
 
